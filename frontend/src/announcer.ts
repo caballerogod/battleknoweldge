@@ -1,8 +1,9 @@
+import {playPartyVoice,stopPartyVoice} from './partyVoice';
 import {soundtrack,type SoundCue} from './soundtrack';
 export type Announcement='camera-on'|'microphone-on'|'correct'|'incorrect'|'timeout'|'round-start';
 type Style='notice'|'result'|'question';
 type Synthesis=Pick<SpeechSynthesis,'getVoices'|'speak'|'cancel'>;
-type Environment={engine:()=>Synthesis|null;utterance:(text:string)=>SpeechSynthesisUtterance;readEnabled?:()=>boolean;saveEnabled?:(enabled:boolean)=>void;playCue?:(cue:SoundCue)=>Promise<void>;stopCue?:()=>void;playbackChange?:(active:boolean)=>void;enabledChange?:(enabled:boolean)=>void};
+type Environment={playNotice?:(text:string)=>Promise<boolean>;stopNotice?:()=>void;readQuestions?:()=>boolean;engine:()=>Synthesis|null;utterance:(text:string)=>SpeechSynthesisUtterance;readEnabled?:()=>boolean;saveEnabled?:(enabled:boolean)=>void;playCue?:(cue:SoundCue)=>Promise<void>;stopCue?:()=>void;playbackChange?:(active:boolean)=>void;enabledChange?:(enabled:boolean)=>void};
 type Job={text:string;style:Style;cue?:SoundCue;pauseMs:number};
 const phrases:Record<Announcement,string>={'camera-on':'Камера включена.','microphone-on':'Микрофон включён.',correct:'Ответ верный!',incorrect:'Ответ неверный.',timeout:'Время вышло.', 'round-start':'Битва начинается!'};
 
@@ -31,8 +32,8 @@ export class QuizAnnouncer{
   }
   announce(event:Announcement,{pauseMs=350}:{pauseMs?:number}={}){const cue:SoundCue|undefined=event==='round-start'?'intro':['correct','incorrect','timeout'].includes(event)?event as SoundCue:undefined;return this.say(phrases[event],event==='correct'||event==='incorrect'||event==='timeout'?'result':'notice',cue,pauseMs);}
   say(text:string,style:Style='question',cue?:SoundCue,pauseMs=350){
-    if(!this.snapshot.enabled||!text.trim())return false;
-    try{if(!this.environment.engine()&&!(cue&&this.environment.playCue)){this.message('Озвучка недоступна в этом браузере');return false;}}
+    if(!this.snapshot.enabled||!text.trim()||(style==='question'&&this.environment.readQuestions?.()===false))return false;
+    try{if(!this.environment.engine()&&!this.environment.playNotice&&!(cue&&this.environment.playCue)){this.message('Озвучка недоступна в этом браузере');return false;}}
     catch{this.message('Не удалось запустить озвучку');return false;}
     if(!this.busy&&this.timer){clearTimeout(this.timer);this.timer=null;}
     this.queue.push({text,style,cue,pauseMs});this.setBlocking(true);if(!this.busy)this.next();return true;
@@ -41,7 +42,7 @@ export class QuizAnnouncer{
     this.generation++;this.queue=[];this.busy=false;
     if(this.timer)clearTimeout(this.timer);if(this.watchdog)clearTimeout(this.watchdog);
     this.timer=null;this.watchdog=null;
-    this.environment.stopCue?.();
+    this.environment.stopCue?.();this.environment.stopNotice?.();
     if(this.current){this.current.onend=null;this.current.onerror=null;this.current=null;}
     try{this.environment.engine()?.cancel();}catch{/* browser already stopped */}
     this.releaseAfterTail();
@@ -60,13 +61,14 @@ export class QuizAnnouncer{
       try{
         if(job.cue&&this.environment.playCue)await this.environment.playCue(job.cue);
         if(generation!==this.generation)return;
+        if(job.style!=='question'&&this.environment.playNotice){const ok=await this.environment.playNotice(job.text);if(generation!==this.generation)return;this.message(ok?job.text:'Голос не загрузился. Игра продолжается.');this.next();return;}
         const engine=this.environment.engine();if(!engine){this.message(job.text);this.next();return;}
         const utterance=this.environment.utterance(job.text);this.current=utterance;
         utterance.lang='ru-RU';utterance.volume=1;
-        utterance.rate=job.style==='result'?.86:job.style==='question'?.96:1;
-        utterance.pitch=job.style==='result'?.88:1;
+        utterance.rate=1;
+        utterance.pitch=1;
         const voices=engine.getVoices().filter(voice=>/^ru(?:[-_]|$)/i.test(voice.lang));
-        const voice=voices.find(voice=>voice.localService)??voices[0];if(voice)utterance.voice=voice;
+        const voice=voices.find(voice=>/natural|svetlana|dariya/i.test(voice.name))??voices.find(voice=>voice.localService)??voices[0];if(voice)utterance.voice=voice;
         const finish=(failed=false)=>{
           if(generation!==this.generation||this.current!==utterance)return;
           if(this.watchdog)clearTimeout(this.watchdog);this.watchdog=null;
@@ -87,6 +89,8 @@ export class QuizAnnouncer{
 }
 
 export const announcer=new QuizAnnouncer({
+  playNotice:playPartyVoice,stopNotice:stopPartyVoice,
+  readQuestions:()=>typeof localStorage!=='undefined'&&localStorage.getItem('battle.readQuestions')==='on',
   engine:()=>typeof window!=='undefined'&&'speechSynthesis'in window?window.speechSynthesis:null,
   utterance:text=>new SpeechSynthesisUtterance(text),
   readEnabled:()=>typeof localStorage==='undefined'||localStorage.getItem('battle.announcements')!=='off',

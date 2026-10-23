@@ -98,5 +98,76 @@
     "v01.mp4": "dddcf170e95a441687a30e3dc85836cd7f268fd98cbaf4c8f43aa3082f33127f",
     "v02.mp4": "417c6644e080ff7e4056c65352b7d1c1438227cddec68336ff2eadd0ab993967",
     "v03.mp4": "70ffe25f9c19f6c7034ad95deac7e2f4b23a2d53098b4a158e43c538c06b43b3"
+  },
+  "memes_2025_2026": {
+    "m01": {
+      "source": "https://knowyourmeme.com/memes/tralalero-tralala",
+      "original": "https://i.kym-cdn.com/entries/icons/original/000/053/192/tralalero_tral.jpg",
+      "bytes": 109430,
+      "sha256": "39b744bdd3d8882b0dc5ccc1ef7f6580291e2e07d55e6cbe4c92cb20d0a2ad33"
+    },
+    "m02": {
+      "source": "https://knowyourmeme.com/memes/ballerina-cappuccina-italian-brainrot",
+      "original": "https://i.kym-cdn.com/entries/icons/original/000/053/748/cover2.jpg",
+      "bytes": 1178778,
+      "sha256": "2eaa941c76a639f161cdc5cfa017d1c48de63e871198eaa993a666dee0bf4074"
+    },
+    "m03": {
+      "source": "https://knowyourmeme.com/memes/tung-tung-tung-sahur",
+      "original": "https://i.kym-cdn.com/entries/icons/original/000/053/559/tung_tung_tung_sahur.jpg",
+      "bytes": 167070,
+      "sha256": "df1c26e9bc7edafca0158945b017878587a4716852654cba0c6a7586c3be9d44"
+    },
+    "m04": {
+      "source": "https://knowyourmeme.com/memes/penguin-walking-toward-mountain-nihilist-penguin",
+      "original": "https://i.kym-cdn.com/entries/icons/original/000/056/159/Lonely_Penguin_Mountain_meme_banner_image.jpg",
+      "bytes": 260148,
+      "sha256": "4e69522257ec38d6727b40afa114a398e0720e84306e6cfa119f57ab77d56f5e"
+    },
+    "m05": {
+      "source": "https://knowyourmeme.com/memes/67-meme-six-seven",
+      "original": "https://i.kym-cdn.com/entries/icons/original/000/053/028/67-meme-header.jpg",
+      "bytes": 509594,
+      "sha256": "944a82ccce53416ad434814854cf7a5ff94904d77e2f30c81815f371e270243b"
+    },
+    "m06": {
+      "source": "https://knowyourmeme.com/memes/nothing-beats-a-jet2-holiday",
+      "original": "https://i.kym-cdn.com/entries/icons/original/000/054/324/jet2_holiday_meme_cover.jpg",
+      "bytes": 170211,
+      "sha256": "fbbddb15a9dca8163594e30da4cedf2e873d8cd9582dd5d1ec8ed9ffb82c418d"
+    },
+    "m07": {
+      "source": "https://knowyourmeme.com/memes/bombardiro-crocodilo-italian-brainrot",
+      "original": "https://i.kym-cdn.com/entries/icons/original/000/053/420/Bombardiro_crocodilo_cover.jpg",
+      "bytes": 197775,
+      "sha256": "d0fd28750885a292cd3070723a0b11d1753b519c4aa853fa025c05c1a194f687"
+    },
+    "m08": {
+      "source": "https://memepedia.world/okak/",
+      "original": "https://memepedia.world/wp-content/uploads/2025/05/2_ubokbxshc.jpg",
+      "bytes": 55252,
+      "sha256": "d0421658fcbb73e673670037af220db7c5a594f3045ff65752047a32d0ff124b"
+    },
+    "m10": {
+      "source": "https://tenor.com/view/tung-tung-tung-tung-tung-tung-sahur-tung-tung-sahur-tung-tung-tung-tung-sahur-gif-447173274102561476",
+      "original": "https://media.tenor.com/BjStuTvuesQAAAPo/tung-tung-tung.mp4",
+      "bytes": 793747,
+      "transformation": "First six seconds, silent H264 for offline playback",
+      "sha256": "28bf4eb0262c42ebbca587901011964b9b7f755531d669e01f6cec32eb7aaf40"
+    }
+  },
+  "voice": {
+    "voice": "ru-RU-SvetlanaNeural",
+    "generation": "edge-tts, build time only; bundled MP3; no runtime network or OpenAI request",
+    "rate": "+2%",
+    "pitch": "+0Hz",
+    "files": [
+      "camera-on",
+      "microphone-on",
+      "correct",
+      "incorrect",
+      "timeout",
+      "round-start"
+    ]
   }
 }

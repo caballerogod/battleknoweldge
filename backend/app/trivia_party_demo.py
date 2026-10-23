@@ -60,6 +60,12 @@ RIDDLES = [
 
 
 def party_demo(base):
+    from .presentation_bank import rows
+    for reserve in (False,True):
+        for clue in rows('Мемы',reserve):
+            if clue['image_id']:
+                target=MEDIA_CLUES if clue['kind']=='video' else IMAGE_CLUES
+                target[clue['image_id']]=(clue['question'],clue['answer'],clue['aliases'],clue['explanation'])
     clues = [dict(q, kind='open', options=[], image_id='') for q in base]
     for t, rows in enumerate(EXTRA,5):
         for i, (question, answer, aliases, explanation) in enumerate(rows):

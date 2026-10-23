@@ -26,6 +26,7 @@ export const RecognitionPanel=memo(function RecognitionPanel({onAction,onPhrase,
   const [progress,setProgress]=useState(0),[sensitivity,setSensitivity]=useState(.65),[actionStatus,setActionStatus]=useState('');
   const sensitivityRef=useRef(sensitivity);sensitivityRef.current=sensitivity;
   const micCheck=useMicrophoneCheck();
+  const [readQuestions,setReadQuestions]=useState(()=>localStorage.getItem('battle.readQuestions')==='on');
   const audio=useSyncExternalStore(announcer.subscribe,announcer.getSnapshot);
   function stopCamera(){version.current++;cancelAnimationFrame(frame.current);stream.current?.getTracks().forEach(t=>t.stop());stream.current=null;model.current?.close();model.current=null;if(video.current)video.current.srcObject=null;setCamera(false);setLoading(false);setProgress(0);setGesture('Камера выключена');canvas.current?.getContext('2d')?.clearRect(0,0,canvas.current.width,canvas.current.height);}
   function stopMic(){controller.current?.stop();}
@@ -119,6 +120,6 @@ export const RecognitionPanel=memo(function RecognitionPanel({onAction,onPhrase,
       <p className="caption">Во время работы микрофона фон приостанавливается. <a href="/audio-preview.html" target="_blank" rel="noreferrer">Прослушать сигналы</a></p>
       <p className="privacy">Видео и проверка уровня звука обрабатываются локально. Распознавание речи может использовать сетевой сервис браузера.</p>
     </details>
-    <button className="show-audio-toggle" aria-label={'Звук игры: '+(audio.enabled?'включён':'выключен')} aria-pressed={audio.enabled} onClick={()=>announcer.setEnabled(!audio.enabled)}>{audio.enabled?<Volume2 size={20}/>:<VolumeX size={20}/>} Звук {audio.enabled?'включён':'выключен'}<span className="show-switch" aria-hidden="true"><i/></span></button><p className="sr-only" role="status">{audio.message}</p>
+    <label><input type="checkbox" checked={readQuestions} onChange={e=>{setReadQuestions(e.target.checked);localStorage.setItem('battle.readQuestions',e.target.checked?'on':'off');announcer.cancel();}}/> Читать вопросы вслух</label><button className="show-audio-toggle" aria-label={'Звук игры: '+(audio.enabled?'включён':'выключен')} aria-pressed={audio.enabled} onClick={()=>announcer.setEnabled(!audio.enabled)}>{audio.enabled?<Volume2 size={20}/>:<VolumeX size={20}/>} Звук {audio.enabled?'включён':'выключен'}<span className="show-switch" aria-hidden="true"><i/></span></button><p className="sr-only" role="status">{audio.message}</p>
   </aside>;
 });

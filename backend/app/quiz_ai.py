@@ -115,6 +115,13 @@ def exact_answer(answer, clue):
     return normalize(answer) in {normalize(v) for v in [clue['answer'], *clue['aliases']]}
 
 
+class ReviewedClues(list):
+    """A playable, structurally valid board with explicit host-review markers."""
+    def __init__(self, clues, issues=()):
+        super().__init__(clues)
+        self.editorial_notes = list(issues)
+
+
 class OpenAIQuiz:
     @property
     def configured(self):
@@ -213,9 +220,9 @@ class OpenAIQuiz:
         for attempt in range(2):
             if mixed:
                 validate_mixed(clues, context['plan'])
-            review = self.request(rules + '\nТы отдельный строгий выпускающий редактор. '
-                'Проверь каждый вопрос, эталон, тематичность, формат и соответствие цены всему ряду. '
-                'Найди банальности даже за 100, подсказанный ответ, фактические ошибки, '
+            review = self.request(rules + '\nТы редактор развлекательной игры. '
+                'Проверь факты и эталоны. Лёгкость, юмор и цена не причина отклонять вопрос. '
+                'Найди подсказанный ответ и фактические ошибки, '
                 'неоднозначность, нишевые мемы и псевдосложные вопросы за 500. '
                 'Для каждого плохого вопроса верни конкретное замечание; для хороших ничего. '
                 'Отклоняй по существенной причине, а не ради стилистического улучшения; '
@@ -230,22 +237,27 @@ class OpenAIQuiz:
                     'Верни полный комплект, сохраняя хорошие клетки, цены и заданные форматы. '
                     'Плохие вопросы замени полностью; самостоятельно проверь каждую замену.',
                     {**context, 'clues': clues, 'issues': issues}, schema, budget), len(topics))
-        raise RuntimeError('Вопросы не прошли редакторскую проверку качества. Попробуйте подготовить новую партию.')
+        return ReviewedClues(clues, issues)
 
     def edit_mixed(self,topics,clues,context,rules,on_progress=None,on_draft=None,checking=None):
         """Keep approved cells; re-author and review only rejected cells."""
         validate_mixed(clues,context['plan'])
         checking = clues if checking is None else checking
-        for attempt in range(4):
+        for attempt in range(2):
             if on_progress:
-                on_progress(f'Редактор проверяет {len(checking)} вопросов. Проверка {attempt+1} из 4.')
-            review = self.request(rules+'\nТы строгий редактор викторины. '
+                on_progress(f'Быстро проверяем {len(checking)} вопросов. Этап {attempt+1} из 2.')
+            try:
+                review = self.request(rules+'\nТы редактор лёгкой игры для компании. '
                 'Проверяй ТОЛЬКО переданные clues (это может быть подмножество поля): '
-                'факты, однозначность, утечку ответа, банальность, соответствие цены и формата. '
+                'только явную фактическую ошибку, неверный эталон, отсутствующее условие '
+                'или несовпадение вопроса с медиа. Лёгкость, шутка, простая формулировка, '
+                'узнаваемость и приблизительная цена НЕ являются ошибками. '
                 'Отклоняй по конкретной существенной причине. Не придирайся к стилю; '
                 'не заменяй хорошую формулировку ради вкуса. Если исправление устранило замечание, '
-                'прими вопрос. Не требуй олимпиадного уровня за 500. Для верных clues issues=[].',
+                'прими вопрос. Даже 500 решается обычной компанией. Для верных clues issues=[].',
                 {**context,'clues':checking},EditorialReview,8000)
+            except (RuntimeError, ValueError, httpx.HTTPError):
+                return ReviewedClues(clues, [dict(topic_index=q['topic_index'],price=q['price'],reason='Проверка не завершилась. Эту клетку оценивает ведущий.') for q in checking])
             issues = obvious_issues(topics,clues)+review['issues']
             if not issues:
                 return clues
@@ -253,25 +265,29 @@ class OpenAIQuiz:
             keys = {(q['topic_index'],q['price']) for q in clues}
             rejected = {(q['topic_index'],q['price']) for q in issues}
             if not rejected <= keys:
-                raise RuntimeError('Редактор указал несуществующую клетку. Подготовка остановлена.')
-            if attempt==3:
-                raise RuntimeError('Вопросы не прошли редакторскую проверку качества после трёх адресных исправлений.')
+                return ReviewedClues(clues,[dict(topic_index=q['topic_index'],price=q['price'],reason='Редактор не смог согласовать замечание. Решение за ведущим.') for q in checking])
+            if attempt==1:
+                return ReviewedClues(clues,issues)
             if on_progress:
                 on_progress(f'Исправляем вопросов: {len(rejected)}. Остальные сохраняются.')
             rejected_clues=[q for q in clues if (q['topic_index'],q['price']) in rejected]
-            repairs = self.request(rules+'\nЗамени ТОЛЬКО клетки из issues. '
+            try:
+                repairs = self.request(rules+'\nЗамени ТОЛЬКО клетки из issues. '
                 'Верни объект по JSON-схеме: каждый ключ соответствует конкретной клетке. '
                 'topic_index,price,kind,image_id сохрани. '
                 'Устрани конкретные причины замечаний. Хорошие клетки сервер сохранит без изменений. '
                 'Если сложный факт ненадёжен, выбери другой проверяемый вопрос той же стоимости.',
                 {**context,'clues':rejected_clues,'issues':issues},addressed_schema(rejected_clues),18000)
-            repairs=list(repairs.values())
-            repaired_keys = [(q['topic_index'],q['price']) for q in repairs]
-            if len(repaired_keys)!=len(rejected) or set(repaired_keys)!=rejected:
-                raise RuntimeError('Модель вернула неполный набор исправлений. Подготовка остановлена.')
-            validate_mixed(repairs,context['plan'],expected_count=len(repairs))
-            replacements = {(q['topic_index'],q['price']):q for q in repairs}
-            clues = validate_pack({'clues':[replacements.get((q['topic_index'],q['price']),q) for q in clues]},8)
+                repairs=list(repairs.values())
+                repaired_keys = [(q['topic_index'],q['price']) for q in repairs]
+                if len(repaired_keys)!=len(rejected) or set(repaired_keys)!=rejected:
+                    raise ValueError('Неполный набор исправлений')
+                validate_mixed(repairs,context['plan'],expected_count=len(repairs))
+                replacements = {(q['topic_index'],q['price']):q for q in repairs}
+                candidate = validate_pack({'clues':[replacements.get((q['topic_index'],q['price']),q) for q in clues]},8)
+                clues = candidate
+            except (RuntimeError, ValueError, KeyError, TypeError, httpx.HTTPError):
+                return ReviewedClues(clues,issues)
             if on_draft:
                 on_draft(clues)
             checking = repairs

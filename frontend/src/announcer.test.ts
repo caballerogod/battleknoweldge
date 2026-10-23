@@ -16,7 +16,7 @@ describe('quiz announcements (synthesis adapter tests, not physical audio)',()=>
     const s=setup();s.announcer.announce(event);expect(s.spoken[0].text).toBe(text);expect(s.spoken[0].lang).toBe('ru-RU');expect(s.spoken[0].voice).toBe(s.localVoice);
   });
   it.each([['correct','Ответ верный!'],['incorrect','Ответ неверный.']] as const)('announces %s with a quiz pause', (event,text)=>{
-    const s=setup();s.announcer.announce(event);expect(s.spoken).toHaveLength(0);expect(s.announcer.isBlocking).toBe(true);vi.advanceTimersByTime(350);expect(s.spoken[0].text).toBe(text);expect(s.spoken[0].rate).toBeLessThan(1);expect(s.spoken[0].pitch).toBeLessThan(1);
+    const s=setup();s.announcer.announce(event);expect(s.spoken).toHaveLength(0);expect(s.announcer.isBlocking).toBe(true);vi.advanceTimersByTime(350);expect(s.spoken[0].text).toBe(text);expect(s.spoken[0].rate).toBe(1);expect(s.spoken[0].pitch).toBe(1);
   });
   it('queues devices behind a delayed result without losing its timer',()=>{
     const s=setup();s.announcer.announce('correct');s.announcer.announce('camera-on');vi.advanceTimersByTime(350);expect(s.spoken.map(u=>u.text)).toEqual(['Ответ верный!']);s.end();expect(s.spoken.map(u=>u.text)).toEqual(['Ответ верный!','Камера включена.']);
@@ -28,6 +28,12 @@ describe('quiz announcements (synthesis adapter tests, not physical audio)',()=>
     const s=setup();s.announcer.announce('correct');s.announcer.setEnabled(false);vi.advanceTimersByTime(2000);expect(s.spoken).toHaveLength(0);expect(s.announcer.announce('camera-on')).toBe(false);expect(s.saveEnabled).toHaveBeenCalledWith(false);expect(s.announcer.isBlocking).toBe(false);
   });
   it('can enable sound again',()=>{const s=setup(false);expect(s.announcer.announce('camera-on')).toBe(false);s.announcer.setEnabled(true);expect(s.announcer.announce('camera-on')).toBe(true);});
+  it('uses recordings without a synthesis engine and waits for their echo tail',async()=>{
+    let finish!:(ok:boolean)=>void;
+    const a=new QuizAnnouncer({engine:()=>null,utterance:()=>{throw Error('No robot voice');},playNotice:()=>new Promise(resolve=>{finish=resolve;}),readQuestions:()=>false});
+    expect(a.say('Long question')).toBe(false);expect(a.announce('camera-on')).toBe(true);expect(a.isBlocking).toBe(true);
+    finish(true);await Promise.resolve();vi.advanceTimersByTime(599);expect(a.isBlocking).toBe(true);vi.advanceTimersByTime(1);expect(a.isBlocking).toBe(false);
+  });
   it('handles unavailable synthesis without blocking the game',()=>{
     const a=new QuizAnnouncer({engine:()=>null,utterance:()=>{throw new Error('not supported');}});expect(a.announce('camera-on')).toBe(false);expect(a.isBlocking).toBe(false);expect(a.getSnapshot().message).toContain('недоступна');
   });

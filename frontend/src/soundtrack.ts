@@ -1,7 +1,7 @@
 export type SoundCue='intro'|'select'|'correct'|'incorrect'|'timeout'|'tick';
 export type AudioPlayer=Pick<HTMLAudioElement,'play'|'pause'|'currentTime'|'volume'|'loop'|'onended'|'onerror'|'preload'>;
 // A new URL also replaces copies of the previous synthesized sounds in browser caches.
-export const audioUrl=(name:string)=>`/audio/${name}.wav?v=Yzhau6No0KY-1`;
+export const audioUrl=(name:string)=>`/audio/party-${name}.wav?v=party-1`;
 
 /** Actual local WAV playback; nonverbal background never disables voice commands. */
 export class QuizSoundtrack{

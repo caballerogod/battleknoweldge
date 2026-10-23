@@ -19,6 +19,16 @@ def image_url(image_id):
 
 # Descriptions/references are server-only generation context. Public media has neutral filenames.
 MEDIA_CATALOG = {
+ 'm01': {'kind': 'image', 'url': '/quiz-media/m01.jpg', 'description': 'Акула в синих кроссовках; подпись Tralalero tralala. Не спрашивай имя: оно на картинке. Можно спросить обувь или животное.', 'reference': 'Tralalero Tralala', 'tags': ['мем', 'интернет', 'юмор', 'brainrot'], 'credit': 'Мемный шаблон / Know Your Meme', 'source': 'https://knowyourmeme.com/memes/tralalero-tralala'},
+ 'm02': {'kind': 'image', 'url': '/quiz-media/m02.jpg', 'description': 'Балерина с головой чашки кофе. Ответ Балерина Капучина.', 'reference': 'Балерина Капучина', 'tags': ['мем', 'интернет', 'юмор', 'brainrot'], 'credit': 'Мемный шаблон / Know Your Meme', 'source': 'https://knowyourmeme.com/memes/ballerina-cappuccina-italian-brainrot'},
+ 'm03': {'kind': 'image', 'url': '/quiz-media/m03.jpg', 'description': 'Улыбающийся деревянный персонаж с битой: Тунг Тунг Тунг Сахур.', 'reference': 'Тунг Тунг Тунг Сахур', 'tags': ['мем', 'интернет', 'юмор', 'brainrot'], 'credit': 'Мемный шаблон / Know Your Meme', 'source': 'https://knowyourmeme.com/memes/tung-tung-tung-sahur'},
+ 'm04': {'kind': 'image', 'url': '/quiz-media/m04.jpg', 'description': 'Одинокий пингвин идёт от колонии к далёким горам. Мем 2026 про уход от всех. Можно спросить, куда идёт: к горам.', 'reference': 'Пингвин идёт к горам', 'tags': ['мем', 'интернет', 'юмор', 'brainrot'], 'credit': 'Мемный шаблон / Know Your Meme', 'source': 'https://knowyourmeme.com/memes/penguin-walking-toward-mountain-nihilist-penguin'},
+ 'm05': {'kind': 'image', 'url': '/quiz-media/m05.jpg', 'description': 'Коллаж с надписью Six Seven. Не спрашивай цифры, они написаны. Можно спросить жест: ладони поочерёдно вверх-вниз.', 'reference': 'Six Seven', 'tags': ['мем', 'интернет', 'юмор', 'brainrot'], 'credit': 'Мемный шаблон / Know Your Meme', 'source': 'https://knowyourmeme.com/memes/67-meme-six-seven'},
+ 'm06': {'kind': 'image', 'url': '/quiz-media/m06.jpg', 'description': 'Реклама Jet2 с подписью Nothing beats a Jet2 holiday. Не спрашивай фразу, она на картинке. Можно спросить рекламируемое: отпуск/путешествие.', 'reference': 'Jet2 Holiday', 'tags': ['мем', 'интернет', 'юмор', 'brainrot'], 'credit': 'Мемный шаблон / Know Your Meme', 'source': 'https://knowyourmeme.com/memes/nothing-beats-a-jet2-holiday'},
+ 'm07': {'kind': 'image', 'url': '/quiz-media/m07.jpg', 'description': 'Крокодил, скрещённый с самолётом. Узнай персонажа Бомбардиро Крокодило.', 'reference': 'Бомбардиро Крокодило', 'tags': ['мем', 'интернет', 'юмор', 'brainrot'], 'credit': 'Мемный шаблон / Know Your Meme', 'source': 'https://knowyourmeme.com/memes/bombardiro-crocodilo-italian-brainrot'},
+ 'm08': {'kind': 'image', 'url': '/quiz-media/m08.jpg', 'description': 'Чёрный кот в капюшоне, шаблон реакции Окак.', 'reference': 'Окак', 'tags': ['мем', 'интернет', 'юмор', 'brainrot'], 'credit': 'Мемный шаблон / Memepedia', 'source': 'https://memepedia.world/okak/'},
+ 'm10': {'kind': 'video', 'url': '/quiz-media/m10.mp4', 'description': 'Короткий беззвучный мемный ролик с деревянным персонажем и битой. Назови предмет в его руках: бита.', 'reference': 'Тунг Тунг Тунг Сахур', 'tags': ['мем', 'интернет', 'юмор', 'brainrot'], 'credit': 'Мемный шаблон / Tenor', 'source': 'https://tenor.com/view/tung-tung-tung-tung-tung-tung-sahur-tung-tung-sahur-tung-tung-tung-tung-sahur-gif-447173274102561476'},
+
  's01':dict(kind='image',url='/quiz-media/s01.jpg',series=True,reference='Игра в кальмара',description='Кадр: мужчина в тёмной одежде сидит в кожаном кресле; это Фронтмен из «Игры в кальмара». Спрашивай только сериал, не имя актёра.',tags=['сериал','кино'],credit='No Ju-han / Netflix',source='https://www.netflix.com/tudum/galleries/squid-game-season-2-photo-gallery'),
  's02':dict(kind='image',url='/quiz-media/s02.jpg',series=True,reference='Ван-Пис',description='Кадр игрового сериала ONE PIECE: команда на деревянной палубе, Луффи в соломенной шляпе. Спрашивай название сериала.',tags=['сериал','кино'],credit='Netflix / Tudum',source='https://www.netflix.com/tudum/galleries/one-piece-first-look-photos'),
  's03':dict(kind='image',url='/quiz-media/s03.jpg',series=True,reference='Уэнсдэй',description='Кадр: Уэнсдэй Аддамс с косами сидит за столом с пишущей машинкой. Спрашивай сериал «Уэнсдэй».',tags=['сериал','кино'],credit='Netflix / Tudum',source='https://www.netflix.com/tudum/wednesday'),
@@ -57,6 +67,7 @@ def public_media(clue, reveal=False):
         return None
     result=dict(kind=asset['kind'],url=asset['url'],mask='none',level=clue['price']//100)
     if asset.get('series') and not reveal:
+        result['hint']={'Игра в кальмара': 'Детские игры, огромный приз и охрана в розовом.', 'Ван-Пис': 'Пираты, команда друзей и соломенная шляпа.', 'Уэнсдэй': 'Мрачная школьница с косами и очень необычная семья.', 'Очень странные дела': 'Хоукинс, друзья на велосипедах и Изнанка.', 'Ведьмак': 'Белые волосы, мечи и охота на чудовищ.'}.get(asset['reference'],'Узнай знакомых героев.')
         result['mask']='pixel' if clue['price'] in (200,400) else 'blur'
     if reveal:
         result.update(credit=asset['credit'],source=asset['source'])
@@ -84,6 +95,7 @@ def format_plan(topics, rng=None):
         eligible = [key for key, value in IMAGE_CATALOG.items()
                     if any(tag in topic.casefold() for tag in value['tags'])]
         dynamic=[(key,v) for key,v in MEDIA_CATALOG.items() if key not in used_media and not v.get('series') and any(tag in topic.casefold() for tag in v['tags'])]
+        eligible += [key for key,v in dynamic if v['kind']=='image']
         audio=[key for key,v in dynamic if v['kind']=='audio']
         video=[key for key,v in dynamic if v['kind']=='video']
         kinds=['open','riddle','choice','audio' if audio else 'open','video' if video else 'image' if eligible else 'choice']
@@ -131,9 +143,9 @@ linked: в question три коротких подсказки с метками
 Закономерность НЕ сообщай в question; в explanation укажи три решения,
 общий фрагмент и объясни каждую подсказку. Не требуй угадывать отсутствующее условие.
 Пример принципа (не копировать дословно): растворитель для лака / материал
-из цемента и заполнителей / плотная бумага для коробок. Решения: ацетон;
-бетон; картон — общее «тон». Меняй наборы и связи, а не только порядок.
-В остальных форматах image_id=''. Цена растёт по шкале знаний, а не длине текста.
+из цемента и заполнителей / плотная бумага для коробок. Решения: кот;
+кофе; ковёр — общее «ко». Меняй наборы и связи, а не только порядок.
+В остальных форматах image_id=''. Это развлекательная игра для обычной компании. Даже 500 без энциклопедии. Для linked дай знакомые предметы и явно подскажи общую часть слов. Не задавай химические формулы. Для мемов спрашивай персонажа, действие или простую шутку, не происхождение. Не спрашивай то, что уже написано на картинке.
 """
 
 

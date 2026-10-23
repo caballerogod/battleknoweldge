@@ -75,7 +75,7 @@ def test_binary_and_linked_contracts_and_repair_schemas():
 def test_public_media_hides_sources_and_references_until_reveal():
     clue=authored_pack(format_plan(TOPICS,random.Random(1)))[0]
     hidden=public_media(clue)
-    assert set(hidden)=={'url','kind','mask','level'} and hidden['mask']!='none'
+    assert set(hidden)=={'url','kind','mask','level','hint'} and hidden['mask']!='none'
     revealed=public_media(clue,True)
     assert revealed['mask']=='none' and revealed['credit'] and revealed['source'].startswith('https://www.netflix.com/')
 
@@ -87,7 +87,7 @@ def test_all_local_assets_exist_small_and_have_expected_signatures():
         data=(root/asset['url'].lstrip('/')).read_bytes();total+=len(data)
         assert len(data)>1000
         assert data[:2]==b'\xff\xd8' if asset['kind']=='image' else data[:4]==b'RIFF' if asset['kind']=='audio' else data[4:8]==b'ftyp'
-    assert total<4_000_000
+    assert total<8_000_000
 
 
 def test_real_generation_adapter_and_40_turns_without_paid_calls(tmp_path,monkeypatch):

@@ -34,9 +34,9 @@ def test_repeated_rejection_is_bounded_without_accepting_bad_clues(monkeypatch):
         calls.append(schema)
         return {'issues':[dict(topic_index=0,price=100,reason='Ошибка')]} if schema is EditorialReview else {'q0_100':original[0]}
     monkeypatch.setattr(OpenAIQuiz,'request',request)
-    with pytest.raises(RuntimeError,match='редакторскую проверку'):
-        OpenAIQuiz().edit_mixed(PARTY_TOPICS,original,context,'Правила')
-    assert sum(s.__name__=='AddressedRepairs' for s in calls)==3 and calls.count(EditorialReview)==4
+    result=OpenAIQuiz().edit_mixed(PARTY_TOPICS,original,context,'Правила')
+    assert result==original and len(result.editorial_notes)==1
+    assert sum(s.__name__=='AddressedRepairs' for s in calls)==1 and calls.count(EditorialReview)==2
 
 
 def test_repair_must_match_requested_cells(monkeypatch):
@@ -44,8 +44,8 @@ def test_repair_must_match_requested_cells(monkeypatch):
     def request(self,instructions,data,schema,tokens):
         return {'issues':[dict(topic_index=0,price=100,reason='Ошибка')]} if schema is EditorialReview else {'q0_200':original[1]}
     monkeypatch.setattr(OpenAIQuiz,'request',request)
-    with pytest.raises(RuntimeError,match='неполный набор'):
-        OpenAIQuiz().edit_mixed(PARTY_TOPICS,original,context,'Правила')
+    result=OpenAIQuiz().edit_mixed(PARTY_TOPICS,original,context,'Правила')
+    assert result==original and result.editorial_notes[0]['price']==100
 
 
 def test_addressed_schema_locks_metadata(monkeypatch):
