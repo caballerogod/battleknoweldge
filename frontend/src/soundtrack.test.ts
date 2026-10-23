@@ -17,3 +17,7 @@ describe('local WAV soundtrack',()=>{
   it('does not play timer ticks into an active microphone',async()=>{const s=setup();s.sound.setMicrophoneActive(true);await s.sound.playCue('tick');expect(s.create).not.toHaveBeenCalled();});
   it('releases a cue if a browser never sends the ended event',async()=>{const s=setup();const pending=s.sound.playCue('timeout');vi.advanceTimersByTime(10000);await pending;expect(s.nodes[0].pause).toHaveBeenCalled();});
 });
+
+describe('question media soundtrack isolation',()=>{
+ it('pauses the bed and suppresses timer ticks while a question clip plays',async()=>{const s=setup();s.sound.setQuestionActive(true);const bed=s.nodes[0],played=vi.mocked(bed.play).mock.calls.length;s.sound.setMediaActive(true);expect(bed.pause).toHaveBeenCalled();await s.sound.playCue('tick');expect(s.nodes).toHaveLength(1);s.sound.setMediaActive(false);expect(vi.mocked(bed.play).mock.calls.length).toBeGreaterThan(played);});
+});

@@ -8,7 +8,7 @@ from pydantic import ConfigDict, Field, create_model
 from .quiz_ai import (OpenAIQuiz, Clue, MixedClue, Verdict, EditorialReview,
                       settings, validate_pack, normalize)
 from .quiz_editor import RULES, obvious_issues
-from .trivia_media import format_plan, IMAGE_CATALOG, validate_mixed
+from .trivia_media import format_plan, validate_mixed, generation_catalog, MEDIA_RULES
 from .ai_usage import start_request, finish_local_request
 
 URL = 'http://127.0.0.1:11434'
@@ -30,7 +30,7 @@ def cells_schema(index, slots, prices, mixed):
         fixed = dict(topic_index=(Literal[index],...),price=(Literal[price],...))
         if mixed:
             slot = next(s for s in slots if s['price']==price)
-            count = 4 if slot['kind']=='choice' else 0
+            count = 4 if slot['kind']=='choice' else 2 if slot['kind']=='yesno' else 0
             fixed.update(kind=(Literal[slot['kind']],...),image_id=(Literal[slot['image_id']],...),
                          options=(list[str],Field(min_length=count,max_length=count)))
         row = create_model(f'Cell_{index}_{price}',__base__=MixedClue if mixed else Clue,**fixed)
@@ -102,10 +102,7 @@ class OllamaQuiz(OpenAIQuiz):
             'Создай только пять вопросов для заданного topic_index: цены 100,200,300,400,500.')
         rules += '\nПиши компактно: question — до 160 символов; explanation — одно предложение до 140 символов; aliases — от 0 до 2 синонимов.'
         if mixed:
-            rules += ('\nСоблюдай plan: kind и image_id неизменны. open и riddle: options=[]. '
-                'riddle — однозначная загадка по теме. choice: ровно 4 разных коротких '
-                'правдоподобных варианта, один дословно равен answer. image: вопрос требует '
-                'осмотра назначенной картинки из images; options=[]. Для остальных image_id="".')
+            rules += MEDIA_RULES
         accepted = []
         for index, topic in enumerate(topics):
             if on_progress:
@@ -114,7 +111,7 @@ class OllamaQuiz(OpenAIQuiz):
             slots = []
             if mixed:
                 slots = [p for p in plan if p['topic_index']==index]
-                context.update(plan=slots, images={p['image_id']:IMAGE_CATALOG[p['image_id']] for p in slots if p['image_id']})
+                context.update(plan=slots, images={p['image_id']:generation_catalog()[p['image_id']] for p in slots if p['image_id']})
             clues, issues = [], []
             prices = list(range(100,501,100))
             for attempt in range(3):

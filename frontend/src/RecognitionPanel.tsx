@@ -1,3 +1,4 @@
+import {isQuestionMediaPlaying} from './questionMediaPlayback';
 import {memo,useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {Aperture,Camera,CameraOff,ChevronDown,Mic,MicOff,Settings2,Volume2,VolumeX} from 'lucide-react';
 import type {GestureRecognizer} from '@mediapipe/tasks-vision';
@@ -92,7 +93,7 @@ export const RecognitionPanel=memo(function RecognitionPanel({onAction,onPhrase,
   function startMic(){
     micCheck.stop();
     if(!controller.current)controller.current=new SpeechController(()=>{const w=window as SpeechWindow,Ctor=w.SpeechRecognition??w.webkitSpeechRecognition;return Ctor?new Ctor():null;},
-      {state:setMicState,text:setSpeech,error:setMicError,action:a=>{if(!callback.current(a))setSpeech('Команда распознана, но сейчас недоступна. Сначала выберите ответ или дождитесь его проверки.');},isSpeaking:()=>announcer.isBlocking||!!window.speechSynthesis?.speaking,ready:()=>announcer.announce('microphone-on'),...(onPhrase?{phrase:(text:string)=>phraseCallback.current?.(text)}:{})});
+      {state:setMicState,text:setSpeech,error:setMicError,action:a=>{if(!callback.current(a))setSpeech('Команда распознана, но сейчас недоступна. Сначала выберите ответ или дождитесь его проверки.');},isSpeaking:()=>isQuestionMediaPlaying()||announcer.isBlocking||!!window.speechSynthesis?.speaking,ready:()=>announcer.announce('microphone-on'),...(onPhrase?{phrase:(text:string)=>phraseCallback.current?.(text)}:{})});
     controller.current.setPlaybackActive(announcer.isBlocking);
     controller.current.start();
   }

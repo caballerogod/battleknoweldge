@@ -8,6 +8,7 @@ export class QuizSoundtrack{
   private enabled=true;
   private activeQuestion=false;
   private microphone=false;
+  private media=false;
   private speech=false;
   private bed:AudioPlayer|null=null;
   private foreground:AudioPlayer|null=null;
@@ -16,10 +17,11 @@ export class QuizSoundtrack{
   constructor(private create:(url:string)=>AudioPlayer){}
   setEnabled(enabled:boolean){this.enabled=enabled;if(!enabled)this.stopCue();this.syncBed();}
   setQuestionActive(active:boolean){this.activeQuestion=active;this.syncBed();}
+  setMediaActive(active:boolean){this.media=active;this.syncBed();}
   setMicrophoneActive(active:boolean){this.microphone=active;this.syncBed();}
   setSpeechActive(active:boolean){this.speech=active;this.syncBed();}
   private syncBed(){
-    if(!this.enabled||!this.activeQuestion||this.microphone||this.speech){this.bed?.pause();return;}
+    if(!this.enabled||!this.activeQuestion||this.microphone||this.speech||this.media){this.bed?.pause();return;}
     try{
       if(!this.bed){this.bed=this.create(audioUrl('suspense'));this.bed.loop=true;this.bed.volume=.18;this.bed.preload='auto';}
       void this.bed.play().catch(()=>{});
@@ -32,7 +34,7 @@ export class QuizSoundtrack{
   }
   playCue(cue:SoundCue):Promise<void>{
     if(!this.enabled)return Promise.resolve();
-    if((cue==='tick'||cue==='select')&&(this.microphone||this.speech))return Promise.resolve();
+    if((cue==='tick'||cue==='select')&&(this.microphone||this.speech||this.media))return Promise.resolve();
     this.stopCue();
     return new Promise(resolve=>{
       try{

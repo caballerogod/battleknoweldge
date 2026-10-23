@@ -1,0 +1,67 @@
+{
+  "series": {
+    "s01": {
+      "source": "https://www.netflix.com/tudum/galleries/squid-game-season-2-photo-gallery",
+      "original": "https://dnm.nflximg.net/api/v6/s0XAg4q_jvYbSSbLvySyUsliNSg/AAAAQR50h4kwzQRa1d1gIkc40fYHIgfB7ZDbp5NTsEDY7TlYCu5TuGlTJRl0YHjBToN96TjAtaJk_d9cJhyhBmaucvo2bBcxPvlpdjiZGPjFPFkuczhnvePrw0QwRNF4j6LBmDL6IUFZpyt4-wU1weHRtQPEqgk.jpg?r=560",
+      "bytes": 199476
+    },
+    "s02": {
+      "source": "https://www.netflix.com/tudum/galleries/one-piece-first-look-photos",
+      "original": "https://dnm.nflximg.net/api/v6/s0XAg4q_jvYbSSbLvySyUsliNSg/AAAAQcZlSbZXLSqRZwvrjmRgd9nKZohcat9-OWecmMXheBeRqpBIREeHBlY36gEzxj31QsW2OHUEFQyPFNoFnaRaeYDL2lGNaGbIUWgGnJzpX7mvf_KHfl5_IkixlanupzHGXk7EPn0ba-_lZrIcAqveooBnOok.jpg?r=0a0",
+      "bytes": 274607
+    },
+    "s03": {
+      "source": "https://www.netflix.com/tudum/wednesday",
+      "original": "https://dnm.nflximg.net/api/v6/s0XAg4q_jvYbSSbLvySyUsliNSg/AAAAQY7A23hKEY8udGGHwFBjbxgz1V7CBoqTYDHW69oYvCDx_jWrzjEhjxysPLc0J-XuRflW7FZ_wlIGrDxyazDuPIn-XymJk8ZQxB2CtgiY3ax12qlVnpMWlNds90fTcHoh2MdKrHCjYb9MZyjaOzYu0i7gRko.jpg?r=c63",
+      "bytes": 31550,
+      "caption": "Jenna Ortega as Wednesday Addams sits at a desk with a typewriter."
+    },
+    "s04": {
+      "source": "https://www.netflix.com/tudum/stranger-things",
+      "original": "https://dnm.nflximg.net/api/v6/s0XAg4q_jvYbSSbLvySyUsliNSg/AAAAQQw-N5AlZQgzvTtu_letqQ8wNI43zpXV1mdk0iGbOOdUniyPx3No4Nx2SPVTyXZkY5s2YhAV-umwW0LN_2e2c-eRHYjYAQLr5J48sz_sMcRT02u7cB4lPGpmxhC7IRQiVDR1cG81Xf57JTtT1qadyBrd_Lg.jpg?r=787",
+      "bytes": 31703,
+      "caption": "Millie Bobby Brown as Eleven in 'Stranger Things 5'"
+    },
+    "s05": {
+      "source": "https://www.netflix.com/tudum/the-witcher",
+      "original": "https://dnm.nflximg.net/api/v6/s0XAg4q_jvYbSSbLvySyUsliNSg/AAAAQVpyHMp7w3_5R-9fGcJESZSsXE-lY4S7EVqNAASnagnBZW_c7-Oh7sRFebCkqxqz4S28wA5maXCzNj47rnVgvRYxt3atosNIPKhN5_j9BQ2i8jgPwFZYIyeBvjx-Zx678ApaZhhAngF5YiOWfj0fxaxj-Ek.jpg?r=c96",
+      "bytes": 37683,
+      "caption": "Henry Cavill as Geralt in The Witcher."
+    }
+  },
+  "nasa_video": {
+    "source": "https://science.nasa.gov/resource/the-apollo-15-hammer-feather-drop/",
+    "original": "https://science.nasa.gov/wp-content/uploads/2023/09/AS15_Ham_feath_drop3_2.m4v",
+    "excerpt_seconds": [
+      54,
+      66
+    ],
+    "credit": "NASA"
+  },
+  "nasa_audio": {
+    "source": "https://science.nasa.gov/resource/sounds-of-mars-one-small-step/",
+    "original": "https://science.nasa.gov/wp-content/uploads/2024/04/sounds-of-mars-one-small-step-earth.wav",
+    "credit": "NASA/JPL-Caltech"
+  },
+  "original": [
+    "a02.wav",
+    "a03.wav",
+    "a04.wav",
+    "v02.mp4",
+    "v03.mp4"
+  ],
+  "sha256": {
+    "a01.wav": "9b5e0abf1e690f99e21af9facac9e818ee99f32c00b2f3bb3a5e0a34b141b4af",
+    "a02.wav": "4044f90bee054e780f9a40193b485a2b159652e740f7e380efd27aa6d6f36c3f",
+    "a03.wav": "9424cf408c7859732a06b1a23465ae5d99c119d3822958305f5f2395d008082e",
+    "a04.wav": "5b5183c5d9eb038242c435ab4611728bf15a4e9b4854011962c8d366788128ce",
+    "s01.jpg": "1dc8f52ac383822c669a4e7687b03eace620e6540a1261cc0a6a47adb9d6be8e",
+    "s02.jpg": "570b1c3ecb5528254e20fe88a24c13b38734c3050f9e8ee5574981ed0334afb2",
+    "s03.jpg": "f181af79fcff661dc43c40dbc6cb1e90c1c1eae786de3e395ca47b33ce579ce8",
+    "s04.jpg": "8dafc348d1f1992920e259aa3516e0f0e18eb062da7ad2cad8a6defe2367861b",
+    "s05.jpg": "2eddd8a7b7839475f6678c899c39198427de44917f949415deb70390130a6fcd",
+    "v01.mp4": "dddcf170e95a441687a30e3dc85836cd7f268fd98cbaf4c8f43aa3082f33127f",
+    "v02.mp4": "417c6644e080ff7e4056c65352b7d1c1438227cddec68336ff2eadd0ab993967",
+    "v03.mp4": "70ffe25f9c19f6c7034ad95deac7e2f4b23a2d53098b4a158e43c538c06b43b3"
+  }
+}

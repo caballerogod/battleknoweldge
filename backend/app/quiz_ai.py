@@ -10,7 +10,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, create_model
 from .quiz_editor import RULES, obvious_issues
 from .ai_usage import start_request, finish_request
-from .trivia_media import IMAGE_CATALOG, format_plan, validate_mixed
+from .trivia_media import format_plan, validate_mixed, generation_catalog, MEDIA_RULES
 
 
 def settings():
@@ -65,7 +65,7 @@ class EditorialReview(BaseModel):
 
 
 class MixedClue(Clue):
-    kind: str = Field(pattern='^(open|riddle|choice|image)$')
+    kind: str = Field(pattern='^(open|riddle|choice|image|audio|video|yesno|linked)$')
     options: list[str] = Field(max_length=4)
     image_id: str = Field(max_length=40)
 
@@ -83,7 +83,7 @@ def addressed_schema(clues):
     fields={}
     for clue in clues:
         t,p,kind,image=clue['topic_index'],clue['price'],clue['kind'],clue['image_id']
-        count=4 if kind=='choice' else 0
+        count=4 if kind=='choice' else 2 if kind=='yesno' else 0
         row=create_model(f'Repair_{t}_{p}',__base__=MixedClue,
             topic_index=(Literal[t],...),price=(Literal[p],...),kind=(Literal[kind],...),
             image_id=(Literal[image],...),options=(list[str],Field(min_length=count,max_length=count)))
@@ -200,18 +200,9 @@ class OpenAIQuiz:
                               'Ровно 40 разных вопросов: topic_index 0..7') if mixed else RULES
         context = {'topics': topics}
         if mixed:
-            context.update(plan=format_plan(topics), images=IMAGE_CATALOG)
-            rules += """
-Формат каждой клетки СТРОГО задан plan: topic_index, price, kind, image_id.
-open: свободный ответ, options=[]; riddle: содержательная загадка с однозначным
-ответом внутри темы, options=[]; choice: ровно 4 разных правдоподобных варианта,
-один точно равен answer; image: вопрос обязательно требует осмотра картинки,
-используй только назначенный image_id и его описание из images, options=[].
-Не вставляй URL, HTML или SVG. Для остальных форматов image_id=''.
-Картинки — проверенные схемы, флаги и иллюстрации; не выдавай их за фотографии.
-Не пиши ответ в вопросе или подписи картинки. Вопросы с вариантами за 500
-тоже требуют знания. Текст вариантов не должен содержать инструкций.
-"""
+            plan=format_plan(topics)
+            context.update(plan=plan, images=generation_catalog(plan))
+            rules += MEDIA_RULES
         budget = 36000 if mixed else 26000
         clues = validate_pack(self.request(rules + '\nСоздай комплект вопросов.',
                                           context, schema, budget), len(topics))

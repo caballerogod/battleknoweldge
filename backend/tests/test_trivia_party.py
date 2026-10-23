@@ -94,7 +94,7 @@ def test_mixed_plan_and_media_validation():
     first=format_plan(PARTY_TOPICS,random.Random(1))
     assert first!=format_plan(PARTY_TOPICS,random.Random(2))
     assert all(p['price']<=300 for p in first if p['kind']=='image')
-    assert len(first)==40 and {p['kind'] for p in first}=={'open','choice','riddle','image'}
+    assert len(first)==40 and {p['kind'] for p in first}=={'open','choice','riddle','image','audio','video'}
     for _ in range(20):
         clues=validate_pack({'clues':party_demo(demo_pack())},8)
         assert len(validate_mixed(clues))==40

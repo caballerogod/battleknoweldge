@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from .models import Player, TriviaGame
 from .questions import BANK
 from .ai_usage import usage_scope, usage_summary
-from .trivia_media import image_url, validate_mixed
+from .trivia_media import image_url, validate_mixed, public_media, SPECIAL_TOPICS
 from .trivia_party_demo import PARTY_TOPICS, party_demo
 from .quiz_ai import OpenAIQuiz, exact_answer, validate_pack, settings
 from .quiz_local import quiz_provider, OllamaQuiz
@@ -129,6 +129,7 @@ def register_trivia(app, engine, clock, provider=None):
 
     def view(g):
         results, pack = json.loads(g.results), json.loads(g.pack)
+        results=[{**r,'media':public_media(pack[r['cell']],reveal=True)} for r in results]
         pending = json.loads(g.pending) if g.pending else None
         done = {r['cell'] for r in results}
         public_pending = None
@@ -139,7 +140,7 @@ def register_trivia(app, engine, clock, provider=None):
             clue = pack[pending['cell']]
             public_pending.update(question=clue['question'], kind=clue.get('kind','open'),
                                   options=clue.get('options',[]), image_url=image_url(clue.get('image_id','')),
-                                  participant=pending.get('participant',current))
+                                  participant=pending.get('participant',current),media=public_media(clue))
             if pending.get('manual') and pending['submitted'] is not None:
                 public_pending.update(manual=True,correct_answer=clue['answer'],explanation=clue['explanation'])
         return dict(id=g.id, player_id=g.player_id, topics=json.loads(g.topics), status=g.status,
@@ -239,7 +240,7 @@ def register_trivia(app, engine, clock, provider=None):
         ready,message=ai.availability() if local else (ai.configured,'')
         return dict(configured=ready, provider='ollama' if local else 'openai', message=message,
                     demo_topics=DEMO_TOPICS, party_demo_topics=PARTY_TOPICS,
-                    presentation_topics=presentation_catalog(),
+                    presentation_topics=presentation_catalog(),suggested_topics=SPECIAL_TOPICS,
                     models={role:config['OLLAMA_MODEL'] if local else config['OPENAI_'+role.upper()+'_MODEL'] for role in ('generation','review','grading')},
                     usage=usage_summary())
 
@@ -335,11 +336,11 @@ def register_trivia(app, engine, clock, provider=None):
             if not value:
                 raise HTTPException(422, 'Сначала произнесите или введите ответ')
             clue = json.loads(g.pack)[payload.cell]
-            if clue.get('kind') == 'choice' and value not in clue['options']:
+            if clue.get('kind') in {'choice','yesno'} and value not in clue['options']:
                 raise HTTPException(422,'Выберите один из четырёх вариантов')
             pending['submitted'] = value
         clue = json.loads(g.pack)[payload.cell]
-        is_choice=clue.get('kind')=='choice'
+        is_choice=clue.get('kind') in {'choice','yesno'}
         correct=pending['submitted']==clue['answer'] if is_choice else exact_answer(pending['submitted'], clue)
         if correct:
             settle(db, g, pending, 'correct')

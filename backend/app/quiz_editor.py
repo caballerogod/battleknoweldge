@@ -59,4 +59,9 @@ def obvious_issues(topics, clues):
             reason = 'Полный эталонный ответ уже содержится в вопросе.'
         if reason:
             issues.append(dict(topic_index=clue['topic_index'], price=clue['price'], reason=reason))
+    # For binary themes avoid a predictable all-yes/all-no pack.
+    for index,topic in enumerate(topics):
+        binary=[q for q in clues if q['topic_index']==index and q.get('kind')=='yesno']
+        if len(binary)==5 and len({q['answer'] for q in binary})==1:
+            issues.append(dict(topic_index=index,price=binary[-1]['price'],reason='Все пять ответов одинаковы: добавь достоверное утверждение с противоположным ответом.'))
     return issues
