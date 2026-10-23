@@ -1,0 +1,4 @@
+import {ArrowLeft,LogOut,UserRound} from 'lucide-react';
+export function ShowHeader({nickname,onExit,disabled=false,label='Выйти из раунда'}:{nickname:string;onExit:()=>void;disabled?:boolean;label?:string}){
+  return <header className="show-header"><a className="show-brand" href="#" onClick={e=>{e.preventDefault();if(!disabled)onExit();}} aria-label="AI Knowledge Battle"><svg width="36" height="40" viewBox="0 0 36 40" fill="none" stroke="currentColor" strokeWidth="1" aria-hidden="true"><path d="M18 1 35 20 18 39 1 20Z M18 1 10 20 18 39 26 20Z M1 20H10 M26 20H35"/></svg><span>AI KNOWLEDGE BATTLE</span></a><div className="show-player"><UserRound size={19}/><span>{nickname}</span></div><button className="show-exit" disabled={disabled} onClick={onExit}>{label==='Выбор игры'&&<ArrowLeft size={18}/>} {label}{label==='Профиль'||label==='Войти'?<UserRound size={18}/>:label!=='Выбор игры'?<LogOut size={18}/>:null}</button></header>;
+}

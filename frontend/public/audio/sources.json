@@ -1,0 +1,55 @@
+{
+  "source": "https://www.youtube.com/watch?v=Yzhau6No0KY",
+  "title": "Кто хочет стать миллионером — 18 ноября 2007",
+  "kind": "broadcast-excerpts",
+  "clips": {
+    "intro": {
+      "file": "intro.wav",
+      "start": 0.35,
+      "duration": 4.5,
+      "purpose": "Заставка выпуска"
+    },
+    "suspense": {
+      "file": "suspense.wav",
+      "start": 2178.5,
+      "duration": 12.8,
+      "purpose": "Ожидание ответа на вопрос об изобретении шприца"
+    },
+    "select": {
+      "file": "select.wav",
+      "start": 2653.3,
+      "duration": 0.7,
+      "purpose": "Фиксация ответа в последнем вопросе"
+    },
+    "correct": {
+      "file": "correct.wav",
+      "start": 572.28,
+      "duration": 3.8,
+      "purpose": "Верный ответ на вопрос об автомобиле"
+    },
+    "incorrect": {
+      "file": "incorrect.wav",
+      "start": 2669.3,
+      "duration": 3.3,
+      "purpose": "Неверный ответ в последнем вопросе"
+    },
+    "timeout": {
+      "file": "timeout.wav",
+      "start": 2669.3,
+      "duration": 2.6,
+      "purpose": "Тот же сигнал проигрыша для истечения времени в нашей игре"
+    },
+    "tick": {
+      "file": "tick.wav",
+      "start": 547.55,
+      "duration": 0.18,
+      "purpose": "Короткий фрагмент отсчёта звонка другу"
+    },
+    "correct-major": {
+      "file": "correct-major.wav",
+      "start": 1872.55,
+      "duration": 5.8,
+      "purpose": "Верный ответ и переход к следующей сумме"
+    }
+  }
+}
