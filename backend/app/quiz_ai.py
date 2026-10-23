@@ -64,8 +64,17 @@ class EditorialReview(BaseModel):
     issues: list[EditorialIssue] = Field(max_length=40)
 
 
+class LieStatement(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    text: str = Field(min_length=8,max_length=160)
+    truth: bool
+    verification: str = Field(min_length=8,max_length=400)
+
+
 class MixedClue(Clue):
-    kind: str = Field(pattern='^(open|riddle|choice|image|audio|video|yesno|linked)$')
+    statements: list[LieStatement] = Field(default_factory=list,max_length=3)
+    origin: str = Field(default='',max_length=30)
+    kind: str = Field(pattern='^(open|riddle|choice|image|audio|video|yesno|linked|lie)$')
     options: list[str] = Field(max_length=4)
     image_id: str = Field(max_length=40)
 
@@ -83,7 +92,7 @@ def addressed_schema(clues):
     fields={}
     for clue in clues:
         t,p,kind,image=clue['topic_index'],clue['price'],clue['kind'],clue['image_id']
-        count=4 if kind=='choice' else 2 if kind=='yesno' else 0
+        count=4 if kind=='choice' else 3 if kind=='lie' else 2 if kind=='yesno' else 0
         row=create_model(f'Repair_{t}_{p}',__base__=MixedClue,
             topic_index=(Literal[t],...),price=(Literal[p],...),kind=(Literal[kind],...),
             image_id=(Literal[image],...),options=(list[str],Field(min_length=count,max_length=count)))
@@ -97,9 +106,9 @@ def validate_pack(data, topic_count=None):
     expected = {(t, p) for t in range(count) for p in range(100, 501, 100)}
     if {(q.topic_index, q.price) for q in pack.clues} != expected:
         raise ValueError('Неполное игровое поле')
-    if len({normalize(q.question) for q in pack.clues}) != count * 5:
+    if len({normalize(q.question)+('|'+'|'.join(q.options) if getattr(q,'kind','')=='lie' else '') for q in pack.clues}) != count * 5:
         raise ValueError('Повторяющиеся вопросы')
-    return [q.model_dump() for q in sorted(pack.clues, key=lambda q: (q.topic_index, q.price))]
+    return [q.model_dump(exclude_defaults=True) for q in sorted(pack.clues, key=lambda q: (q.topic_index, q.price))]
 
 
 def normalize(text):
@@ -119,7 +128,23 @@ class ReviewedClues(list):
     """A playable, structurally valid board with explicit host-review markers."""
     def __init__(self, clues, issues=()):
         super().__init__(clues)
-        self.editorial_notes = list(issues)
+        from .lie_questions import replace_unverified
+        replace_unverified(self,issues)
+        self.editorial_notes = [n for n in issues if not any(q.get('kind')=='lie' and q['topic_index']==n['topic_index'] and q['price']==n['price'] for q in self)]
+
+
+def strict_schema(schema):
+    result=schema.model_json_schema()
+    def visit(node):
+        if isinstance(node,dict):
+            node.pop('default',None)
+            if node.get('type')=='object':
+                node['required']=list(node.get('properties',{}));node['additionalProperties']=False
+            for value in node.values():visit(value)
+        elif isinstance(node,list):
+            for item in node:visit(item)
+    visit(result)
+    return result
 
 
 class OpenAIQuiz:
@@ -136,6 +161,8 @@ class OpenAIQuiz:
         if not model:
             raise RuntimeError('Не задана модель для этапа '+role)
         stage = 'repair' if role=='GENERATION' and 'issues' in data else role.lower()
+        if schema.__name__=='FinalClue':stage='final_generation'
+        elif schema.__name__=='HostLine':stage='host_comment'
         # A full 40-cell pack is mostly authored text, not a long reasoning problem.
         # Keep flagship latency bounded; the separate editor still checks every clue.
         flagship = model=='gpt-5.4' or model.startswith('gpt-5.4-2026-')
@@ -152,8 +179,8 @@ class OpenAIQuiz:
                       'input': json.dumps(data, ensure_ascii=False), 'store': False,
                       'reasoning': {'effort': effort}, 'max_output_tokens': tokens,
                       'text': {'format': {'type': 'json_schema', 'name': schema.__name__,
-                                         'strict': True, 'schema': schema.model_json_schema()}}},
-                timeout=300 if role=='GENERATION' else 120 if role=='REVIEW' else 40)
+                                         'strict': True, 'schema': strict_schema(schema)}}},
+                timeout=25 if schema.__name__=='FinalClue' else 8 if schema.__name__=='HostLine' else 300 if role=='GENERATION' else 120 if role=='REVIEW' else 40)
             status='http_error'
             try:
                 body=response.json()
@@ -213,6 +240,8 @@ class OpenAIQuiz:
         budget = 36000 if mixed else 26000
         clues = validate_pack(self.request(rules + '\nСоздай комплект вопросов.',
                                           context, schema, budget), len(topics))
+        for clue in clues:
+            if clue.get('kind')=='lie':clue['origin']='ai'
         if on_draft:
             on_draft(clues)
         if mixed:
@@ -241,6 +270,8 @@ class OpenAIQuiz:
 
     def edit_mixed(self,topics,clues,context,rules,on_progress=None,on_draft=None,checking=None):
         """Keep approved cells; re-author and review only rejected cells."""
+        from .lie_questions import replace_unverified
+        clues=replace_unverified(clues)
         validate_mixed(clues,context['plan'])
         checking = clues if checking is None else checking
         for attempt in range(2):
@@ -279,6 +310,8 @@ class OpenAIQuiz:
                 'Если сложный факт ненадёжен, выбери другой проверяемый вопрос той же стоимости.',
                 {**context,'clues':rejected_clues,'issues':issues},addressed_schema(rejected_clues),18000)
                 repairs=list(repairs.values())
+                for repair in repairs:
+                    if repair.get('kind')=='lie':repair['origin']='ai'
                 repaired_keys = [(q['topic_index'],q['price']) for q in repairs]
                 if len(repaired_keys)!=len(rejected) or set(repaired_keys)!=rejected:
                     raise ValueError('Неполный набор исправлений')

@@ -365,7 +365,12 @@ MEDIA_OVERRIDES = {
                            'options': []}}
 
 
+from .lie_questions import lie_rows
+RAW['Найди ложь']=''
+ALIASES['Найди ложь']=['два факта одна ложь','правда и ложь','три утверждения']
+
 def rows(topic,reserve=False):
+    if topic=='Найди ложь':return lie_rows(reserve)
     lines=RAW[topic].strip().splitlines()
     if len(lines)!=10:
         raise ValueError('В теме нужны десять вопросов')

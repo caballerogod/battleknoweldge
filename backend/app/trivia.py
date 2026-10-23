@@ -13,6 +13,9 @@ from .quiz_ai import OpenAIQuiz, exact_answer, validate_pack, settings
 from .quiz_local import quiz_provider, OllamaQuiz
 from .presentation_bank import catalog as presentation_catalog, presentation_pack
 
+from .show_rules import ShowOptions,register_show,scores,phase,start_final,public_show,steal_result,FINAL_BANK
+from .show_host import state,save,options,emit
+
 DEMO_TOPICS = ['Программирование', 'Математика', 'История', 'География', 'Наука']
 DEMO_ALIASES = {
     'int': ['инт', 'интеджер', 'тип int'],
@@ -44,6 +47,7 @@ class NewGame(BaseModel):
     demo: bool = False
     presentation: bool = False
     reserve: bool = False
+    show: ShowOptions | None = None
 
     @field_validator('topics')
     @classmethod
@@ -71,6 +75,8 @@ class NewGame(BaseModel):
             raise ValueError('Резервный набор доступен в презентации')
         if len(self.topics) != (8 if self.participants else 5):
             raise ValueError('Для партии на троих нужны восемь тем; для прежней одиночной — пять')
+        if self.show and len(self.participants)!=3:
+            raise ValueError("Новые механики доступны для трёх участников")
         return self
 
 
@@ -79,11 +85,13 @@ class CellInput(BaseModel):
 
 
 class FreeAnswer(CellInput):
+    attempt_token: str | None = Field(default=None,max_length=50)
     answer: str | None = Field(default=None, max_length=500)
     skip: bool = False
 
 
 class HostVerdict(CellInput):
+    attempt_token: str | None = Field(default=None,max_length=50)
     decision: str = Field(pattern='^(correct|incorrect|ambiguous)$')
 
 
@@ -109,7 +117,11 @@ def register_trivia(app, engine, clock, provider=None):
             for g in db.scalars(select(TriviaGame).where(TriviaGame.status.in_(['generating', 'ready']))):
                 if g.status == 'generating':
                     g.status, g.error = 'failed', 'Подготовка прервана перезапуском сервера. Создайте новую партию.'
-                elif g.pending:
+                if phase(g)=='final_preparing':
+                    st=state(g);st['phase']='final_ready';st['final'].update(clue=FINAL_BANK[0],source='local_fallback');save(g,st)
+                st=state(g)
+                if st.get('comment_pending'):st['comment_pending']=False;save(g,st)
+                if g.pending:
                     pending = json.loads(g.pending)
                     if pending.get('grading'):
                         pending.update(grading=False, grade_error='Проверка прервана. Повторите её: ответ сохранён, штрафа нет.')
@@ -150,23 +162,28 @@ def register_trivia(app, engine, clock, provider=None):
         public_pending = None
         names = json.loads(g.participants or '[]')
         current = len(results) % len(names) if names else 0
+        totals=scores(g)
         if pending:
             public_pending = {key: pending[key] for key in ['cell', 'deadline', 'submitted', 'grading', 'grade_error']}
             public_pending.update(paused=pending.get('paused',False),remaining=pending.get('remaining'),time_limit=pending.get('time_limit',30))
             clue = pack[pending['cell']]
             public_pending.update(question=clue['question'], kind=clue.get('kind','open'),
+                                  origin=clue.get('origin',''),
                                   options=clue.get('options',[]), image_url=image_url(clue.get('image_id','')),
                                   participant=pending.get('participant',current),media=public_media(clue))
             if pending.get('manual') and pending['submitted'] is not None:
                 public_pending.update(manual=True,correct_answer=clue['answer'],explanation=clue['explanation'])
                 public_pending['review_note']=' '.join(n['reason'] for n in notes_for(g,pending['cell']))
+            if options(g).get('steal'):
+                for key in ('correct_answer','explanation','review_note'):public_pending.pop(key,None)
+            public_pending.update(steal=pending.get('steal'),attempt_token=pending.get('attempt_token'),attempts=pending.get('attempts',[]))
             public_pending['host_review']=bool(notes_for(g,pending['cell']))
         return dict(id=g.id, player_id=g.player_id, topics=json.loads(g.topics), status=g.status,
                     demo=g.demo, error=g.error,
-                    participants=[dict(name=name,score=sum(r['delta'] for r in results if r.get('participant',0)==i))
+                    participants=[dict(name=name,score=totals[i])
                                   for i,name in enumerate(names)],
                     current_participant=current, total=len(pack) or len(json.loads(g.topics))*5,
-                    score=sum(r['delta'] for r in results),
+                    score=sum(totals) if names else sum(r['delta'] for r in results),show=public_show(g,clock),
                     played=len(results), cells=[dict(cell=i, topic_index=q['topic_index'], price=q['price'],
                                                    played=i in done) for i, q in enumerate(pack)],
                     pending=public_pending, results=results, server_time=clock(), usage=usage_summary(g.id),
@@ -199,6 +216,8 @@ def register_trivia(app, engine, clock, provider=None):
                 pack = validate_pack({'clues':pack},len(topics))
             if len(topics)==8:
                 validate_mixed(pack)
+                from .lie_questions import shuffle_lies
+                shuffle_lies(pack)
             with Session(engine) as db:
                 g = require(db, sid)
                 g.pack, g.status = json.dumps(pack, ensure_ascii=False), 'ready'
@@ -213,16 +232,38 @@ def register_trivia(app, engine, clock, provider=None):
         finally:
             generation_progress.pop(sid,None)
 
-    def settle(db, g, pending, decision, reason=''):
-        clue = json.loads(g.pack)[pending['cell']]
-        delta = clue['price'] if decision == 'correct' else -clue['price'] if decision == 'incorrect' else 0
-        results = json.loads(g.results)
-        results.append(dict(cell=pending['cell'], participant=pending.get('participant',0), decision=decision, delta=delta,
-                            answer=pending['submitted'] or '', correct_answer=clue['answer'],
-                            question=clue['question'], explanation=clue['explanation'], review=reason))
-        g.results, g.pending = json.dumps(results, ensure_ascii=False), None
-        if len(results) == len(json.loads(g.pack)):
-            g.status = 'finished'
+    def settle(db, g, pending, decision, reason='',complete_steal=False):
+        clue=json.loads(g.pack)[pending['cell']]
+        before=scores(g)
+        if options(g).get('steal'):
+            if not complete_steal and not steal_result(g,pending,decision,clock,reason):
+                db.commit();return
+            attempts=pending.get('attempts',[])
+            selected=next((a for a in attempts if a['decision']=='correct'),attempts[0])
+            result=dict(selected,attempts=attempts)
+        else:
+            delta=clue['price'] if decision=='correct' else -clue['price'] if decision=='incorrect' else 0
+            result=dict(participant=pending.get('participant',0),decision=decision,delta=delta,answer=pending['submitted'] or '')
+            emit(g,'correct_answer' if decision=='correct' else 'wrong_answer',participant=result['participant'],price=clue['price'])
+        result.update(cell=pending['cell'],correct_answer=clue['answer'],question=clue['question'],explanation=clue['explanation'],review=reason,kind=clue.get('kind','open'),options=clue.get('options',[]),statements=clue.get('statements',[]))
+        results=json.loads(g.results);results.append(result)
+        g.results,g.pending=json.dumps(results,ensure_ascii=False),None
+        after=scores(g)
+        if before and len(set(after))>1 and after.index(max(after))!=before.index(max(before)):
+            emit(g,'leader_changed',participant=after.index(max(after)))
+        actor=result['participant']
+        recent=[a for r in results for a in r.get('attempts',[r]) if a['participant']==actor]
+        streak=0
+        for attempt in reversed(recent):
+            if attempt['decision']!='correct':break
+            streak+=1
+        if streak and streak%3==0:emit(g,'streak_reached',participant=actor)
+        if len(results)==len(json.loads(g.pack)):
+            if options(g).get('final'):start_final(g)
+            else:
+                g.status='finished';st=state(g);st['phase']='finished';save(g,st)
+                names=json.loads(g.participants or '[]')
+                if names:emit(g,'game_finished',names=', '.join(n for i,n in enumerate(names) if after[i]==max(after)))
         db.commit()
 
     def grade(sid, token):
@@ -243,7 +284,9 @@ def register_trivia(app, engine, clock, provider=None):
                 g = require(db, sid)
                 live = json.loads(g.pending) if g.pending else None
                 if live and live.get('token') == token:
-                    settle(db, g, live, verdict['decision'], verdict.get('explanation', ''))
+                    if verdict['decision']=='ambiguous' and options(g):
+                        live.update(manual=True,grading=False,grade_error='');g.pending=json.dumps(live,ensure_ascii=False);db.commit()
+                    else:settle(db, g, live, verdict['decision'], verdict.get('explanation', ''))
         except Exception:
             with Session(engine) as db:
                 db.execute(text('BEGIN IMMEDIATE'))
@@ -285,6 +328,7 @@ def register_trivia(app, engine, clock, provider=None):
             if previous.player_id != payload.player_id:
                 raise HTTPException(409, 'Идентификатор запроса уже использован')
             meta=json.loads(previous.presentation_meta or '{}')
+            if options(previous)!=(payload.show.model_dump() if payload.show else {}):raise HTTPException(409,'Настройки повторного запроса должны совпадать')
             if bool(previous.presentation_meta)!=payload.presentation or meta.get('reserve_requested',False)!=payload.reserve or previous.demo != payload.demo or json.loads(previous.topics) != payload.topics or json.loads(previous.participants or '[]') != payload.participants:
                 raise HTTPException(409, 'Повторный запрос должен содержать те же темы')
             return view(previous)
@@ -302,6 +346,8 @@ def register_trivia(app, engine, clock, provider=None):
             except ValueError as error:
                 raise HTTPException(422,str(error)) from None
             g.pack,g.status,g.presentation_meta=json.dumps(pack,ensure_ascii=False),'ready',json.dumps(meta,ensure_ascii=False)
+        if payload.show:save(g,dict(options=payload.show.model_dump(),phase='board'))
+        emit(g,'game_started')
         db.add(g)
         db.flush()
         result = view(g)
@@ -332,7 +378,7 @@ def register_trivia(app, engine, clock, provider=None):
     def open_cell(sid: str, payload: CellInput, db: Session = Depends(db_session)):
         db.execute(text('BEGIN IMMEDIATE'))
         g = require(db, sid)
-        if g.status != 'ready':
+        if g.status != 'ready' or phase(g)!='board':
             raise HTTPException(409, 'Поле пока недоступно')
         if payload.cell >= len(json.loads(g.pack)):
             raise HTTPException(422,'Клетка вне поля')
@@ -344,7 +390,8 @@ def register_trivia(app, engine, clock, provider=None):
             raise HTTPException(409, 'Этот вопрос уже сыгран')
         names=json.loads(g.participants or '[]')
         g.pending = json.dumps(dict(cell=payload.cell, participant=len(json.loads(g.results)) % len(names) if names else 0, deadline=clock()+60, time_limit=60, paused=False, submitted=None,
-                                    grading=False, grade_error=''))
+                                    grading=False, grade_error='',attempt_token=str(uuid4())))
+        emit(g,'question_opened',participant=len(json.loads(g.results))%len(names) if names else 0,price=json.loads(g.pack)[payload.cell]['price'])
         db.commit()
         return view(g)
 
@@ -352,7 +399,7 @@ def register_trivia(app, engine, clock, provider=None):
         db.execute(text('BEGIN IMMEDIATE'))
         g=require(db,sid)
         pending=json.loads(g.pending) if g.pending else None
-        if g.status!='ready' or not pending or pending['cell']!=payload.cell or pending['submitted'] is not None:
+        if g.status!='ready' or (pending and pending.get('steal')) or not pending or pending['cell']!=payload.cell or pending['submitted'] is not None:
             raise HTTPException(409,'Помощь зала доступна только во время ответа')
         if pause and not pending.get('paused'):
             now=clock()
@@ -383,6 +430,9 @@ def register_trivia(app, engine, clock, provider=None):
         pending = json.loads(g.pending) if g.pending else None
         if not pending or pending['cell'] != payload.cell:
             raise HTTPException(409, 'Откройте вопрос перед ответом')
+        if options(g).get('steal') and payload.attempt_token!=pending.get('attempt_token'):
+            raise HTTPException(409,'Эта попытка уже завершена. Обновите вопрос.')
+        if pending.get('steal',{}).get('stage')=='claim':raise HTTPException(409,'Сначала выберите участника перехвата')
         if pending.get('manual'):
             return view(g)
         if pending['grading'] and clock()-pending.get('started', clock()) < 100:
@@ -400,11 +450,11 @@ def register_trivia(app, engine, clock, provider=None):
             if not value:
                 raise HTTPException(422, 'Сначала произнесите или введите ответ')
             clue = json.loads(g.pack)[payload.cell]
-            if clue.get('kind') in {'choice','yesno'} and value not in clue['options']:
+            if clue.get('kind') in {'choice','yesno','lie'} and value not in clue['options']:
                 raise HTTPException(422,'Выберите один из четырёх вариантов')
             pending['submitted'] = value
         clue = json.loads(g.pack)[payload.cell]
-        is_choice=clue.get('kind') in {'choice','yesno'}
+        is_choice=clue.get('kind') in {'choice','yesno','lie'}
         correct=pending['submitted']==clue['answer'] if is_choice else exact_answer(pending['submitted'], clue)
         if notes_for(g,payload.cell):
             pending.update(manual=True,grading=False,grade_error='')
@@ -430,13 +480,15 @@ def register_trivia(app, engine, clock, provider=None):
     def judge(sid: str,payload: HostVerdict,db: Session = Depends(db_session)):
         db.execute(text('BEGIN IMMEDIATE'))
         g=require(db,sid)
-        if not g.presentation_meta and not notes_for(g,payload.cell):
+        if not g.presentation_meta and not notes_for(g,payload.cell) and not (g.pending and json.loads(g.pending).get('manual')):
             raise HTTPException(409,'Для этой клетки не назначена оценка ведущего')
         if any(r['cell']==payload.cell for r in json.loads(g.results)):
             return view(g)
         pending=json.loads(g.pending) if g.pending else None
         if not pending or pending['cell']!=payload.cell or not pending.get('manual') or pending['submitted'] is None:
             raise HTTPException(409,'Сначала зафиксируйте свободный ответ')
+        if options(g).get('steal') and payload.attempt_token!=pending.get('attempt_token'):
+            raise HTTPException(409,'Это решение относится к завершённой попытке')
         settle(db,g,pending,payload.decision,'Решение ведущего.')
         return view(g)
 
@@ -447,8 +499,10 @@ def register_trivia(app, engine, clock, provider=None):
         if not has_playable_draft(g):
             raise HTTPException(409,'Готового поля из 40 вопросов пока нет')
         clues=validate_pack({'clues':json.loads(g.pack)},8)
+        from .quiz_ai import ReviewedClues
+        clues=ReviewedClues(clues,[dict(topic_index=q['topic_index'],price=q['price'],reason='Сохранённый набор: решение принимает ведущий.') for q in clues])
         g.pack=json.dumps(clues,ensure_ascii=False)
-        g.editorial_notes=json.dumps([dict(topic_index=q['topic_index'],price=q['price'],reason='Сохранённый набор: решение принимает ведущий.') for q in clues],ensure_ascii=False)
+        g.editorial_notes=json.dumps(clues.editorial_notes,ensure_ascii=False)
         g.status,g.error='ready',''
         db.commit()
         return view(g)
@@ -457,12 +511,18 @@ def register_trivia(app, engine, clock, provider=None):
     def finish(sid: str, db: Session = Depends(db_session)):
         db.execute(text('BEGIN IMMEDIATE'))
         g = require(db, sid)
+        if phase(g).startswith('final_'):
+            raise HTTPException(409,'Завершите финал или вернитесь к нему позже: прогресс сохранён')
         if g.status == 'generating':
             raise HTTPException(409, 'Дождитесь окончания подготовки')
         if g.pending and json.loads(g.pending)['submitted'] is not None:
             raise HTTPException(409, 'Сначала завершите проверку зафиксированного ответа')
         if g.pending:
-            settle(db, g, json.loads(g.pending), 'skip')
+            p=json.loads(g.pending)
+            settle(db, g, p, 'skip',complete_steal=bool(p.get('steal')))
         g.status = 'finished'
+        st=state(g);st['phase']='finished';save(g,st)
         db.commit()
         return view(g)
+
+    register_show(app,engine,clock,ai,db_session,require,view,settle)

@@ -24,7 +24,7 @@ def stage(tmp_path):
         yield client, app, clock, payload
 
 def test_all_230_clues_and_random_boards():
-    assert len(bank.catalog()) == 23
+    assert len(bank.catalog()) == 24
     questions=[]
     for topic in bank.RAW:
         for reserve in (False, True):
@@ -32,7 +32,7 @@ def test_all_230_clues_and_random_boards():
             assert len(clues)==5
             assert [q['price'] for q in clues]==[100,200,300,400,500]
             questions.extend(q['question'] for q in clues)
-    assert len(set(questions))==230
+    assert len(set(questions))==240
     rng=random.Random(42)
     for _ in range(100):
         pack,meta=bank.presentation_pack(rng.sample(list(bank.RAW),8),rng.choice([True,False]))
@@ -56,7 +56,7 @@ def test_fallback_preserves_other_topics(monkeypatch):
 def test_catalog_creation_reserve_and_idempotency_without_key(stage):
     c,app,clock,payload=stage
     config=c.get('/api/trivia/config').json()
-    assert not config['configured'] and len(config['presentation_topics'])==23
+    assert not config['configured'] and len(config['presentation_topics'])==24
     assert all(set(t)=={'name','aliases'} for t in config['presentation_topics'])
     g=c.post('/api/trivia/games',json=payload).json()
     assert g['status']=='ready' and g['presentation'] and g['total']==40
@@ -132,7 +132,7 @@ def test_manual_answer_survives_restart_and_old_database_migrates(tmp_path):
 def test_expanded_presentation_complete_party_never_uses_ai(stage,reserve):
     from app.trivia_media import SPECIAL_TOPICS
     c,app,clock,payload=stage
-    topics=[*SPECIAL_TOPICS,'Музыка','Космос','Наука','Математика','География']
+    topics=[*SPECIAL_TOPICS[:3],'Музыка','Космос','Наука','Математика','География']
     response=c.post('/api/trivia/games',json={**payload,'topics':topics,'reserve':reserve})
     assert response.status_code==200,response.text
     g=response.json();url='/api/trivia/games/'+g['id']
@@ -173,7 +173,7 @@ def test_expanded_presentation_complete_party_never_uses_ai(stage,reserve):
 def test_new_catalog_topics_and_independent_reserve_stills():
     from app.trivia_media import SPECIAL_TOPICS, MEDIA_CATALOG
     from pathlib import Path
-    assert [t['name'] for t in bank.catalog()[:3]]==SPECIAL_TOPICS
+    assert [t['name'] for t in bank.catalog()[:4]]==SPECIAL_TOPICS
     primary=bank.rows(SPECIAL_TOPICS[0]);reserve=bank.rows(SPECIAL_TOPICS[0],True)
     ids=lambda clues:{q['image_id'] for q in clues}
     assert not ids(primary)&ids(reserve)

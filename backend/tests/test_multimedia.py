@@ -13,7 +13,7 @@ from app.quiz_local import cells_schema
 from app.trivia_media import MEDIA_CATALOG, SPECIAL_TOPICS, format_plan, public_media, topic_style, validate_mixed
 from app.trivia_party_demo import MEDIA_CLUES
 
-TOPICS=[*SPECIAL_TOPICS,'Музыка','Космос','Наука','Кино','Математика']
+TOPICS=[*SPECIAL_TOPICS[:3],'Музыка','Космос','Наука','Кино','Математика']
 
 def authored_pack(plan):
     result=[]

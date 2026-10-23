@@ -30,7 +30,7 @@ def cells_schema(index, slots, prices, mixed):
         fixed = dict(topic_index=(Literal[index],...),price=(Literal[price],...))
         if mixed:
             slot = next(s for s in slots if s['price']==price)
-            count = 4 if slot['kind']=='choice' else 2 if slot['kind']=='yesno' else 0
+            count = 4 if slot['kind']=='choice' else 3 if slot['kind']=='lie' else 2 if slot['kind']=='yesno' else 0
             fixed.update(kind=(Literal[slot['kind']],...),image_id=(Literal[slot['image_id']],...),
                          options=(list[str],Field(min_length=count,max_length=count)))
         row = create_model(f'Cell_{index}_{price}',__base__=MixedClue if mixed else Clue,**fixed)

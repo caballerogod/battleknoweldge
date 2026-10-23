@@ -47,13 +47,14 @@ MEDIA_CATALOG = {
  'v02':dict(kind='video',url='/quiz-media/v02.mp4',description='Авторская анимация маятника: груз колеблется на нити, совершая полный цикл за 2 секунды; ролик 6 секунд, три полных периода. Это схема, не запись лабораторного эксперимента.',tags=['наук','физик','математ','видео'],credit='AI Knowledge Battle — собственная анимация',source=''),
  'v03':dict(kind='video',url='/quiz-media/v03.mp4',description='Авторская анимация мяча: он движется вправо и трижды подскакивает над горизонтальной линией. Это схема, не съёмка спортивного матча.',tags=['математ','физик','видео'],credit='AI Knowledge Battle — собственная анимация',source=''),
 }
-SPECIAL_TOPICS = ['Кадры из сериалов','Химическая (или бытовая) загадка','Да или Нет']
+SPECIAL_TOPICS = ['Кадры из сериалов','Химическая (или бытовая) загадка','Да или Нет','Найди ложь']
 
 
 def topic_style(topic):
     value=' '.join(topic.casefold().replace('ё','е').split())
     if ('сериал' in value and any(w in value for w in ('кадр','угадай','размыт','пиксел','силуэт'))):
         return 'frames'
+    if 'найди ложь' in value:return 'lie'
     if value in {'да или нет','да/нет','да нет'}:
         return 'yesno'
     if 'загад' in value and any(w in value for w in ('хим','бытов')):
@@ -89,7 +90,7 @@ def format_plan(topics, rng=None):
             rng.shuffle(ids)
             plan.extend(dict(topic_index=t,price=(i+1)*100,kind='image',image_id=key) for i,key in enumerate(ids[:5]))
             continue
-        if style in {'yesno','linked'}:
+        if style in {'yesno','linked','lie'}:
             plan.extend(dict(topic_index=t,price=p,kind=style,image_id='') for p in range(100,501,100))
             continue
         eligible = [key for key, value in IMAGE_CATALOG.items()
@@ -120,6 +121,8 @@ def generation_catalog(plan=None):
 
 
 MEDIA_RULES = """
+lie: ровно три options и statements в том же порядке. Каждый statement имеет text, truth (bool), verification (доказательство или достоверный источник, не выдумывай ссылки). Ровно два truth=true и одно false; answer дословно равен ложному text. Объясни все три утверждения. Порядок случайный. Для остальных форматов statements=[]. origin="ai". Нет субъективных и меняющихся с датой фактов. Пять заданий должны различаться по содержанию и нарастать от узнавания до небольшого подвоха.
+
 Каждая клетка строго задана plan: topic_index, price, kind, image_id. Поле image_id
 хранит ID зарегистрированного медиа и для аудио/видео. Не меняй назначенный материал.
 open/riddle: options=[]. choice: четыре разных правдоподобных варианта,
@@ -155,15 +158,15 @@ def validate_mixed(clues, plan=None, expected_count=40):
     slots = {(p['topic_index'], p['price']):p for p in plan} if plan else {}
     for q in clues:
         kind = q.get('kind')
-        if kind not in {'open','riddle','choice','image','audio','video','yesno','linked'}:
+        if kind not in {'open','riddle','choice','image','audio','video','yesno','linked','lie'}:
             raise ValueError('Неизвестный формат')
         if plan:
             slot = slots.get((q['topic_index'],q['price']))
             if not slot or any(q[k] != slot[k] for k in ('kind','image_id')):
                 raise ValueError('Модель изменила назначенный формат')
         options = q.get('options',[])
-        if kind in {'choice','yesno'}:
-            count=2 if kind=='yesno' else 4
+        if kind in {'choice','yesno','lie'}:
+            count=2 if kind=='yesno' else 3 if kind=='lie' else 4
             if kind=='yesno' and options!=['Да','Нет']:
                 raise ValueError('Для Да или Нет нужны именно две кнопки')
             if len(options) != count or any(not isinstance(v,str) or not v.strip() or len(v)>160 for v in options):
@@ -186,6 +189,9 @@ def validate_mixed(clues, plan=None, expected_count=40):
                 raise ValueError('Неизвестная иллюстрация')
         elif q.get('image_id'):
             raise ValueError('Материал допустим только для image/audio/video')
+        if kind=='lie':
+            from .lie_questions import validate_lie
+            validate_lie(q)
         if kind=='linked':
             import re
             words=[re.sub(r'[^а-яa-z]', '', w.casefold().replace('ё','е')) for w in q['answer'].split(';')]
