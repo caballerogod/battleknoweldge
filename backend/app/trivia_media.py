@@ -52,8 +52,14 @@ def validate_mixed(clues, plan=None, expected_count=40):
         if kind == 'choice':
             if len(options) != 4 or any(not isinstance(v,str) or not v.strip() or len(v)>160 for v in options):
                 raise ValueError('Нужны четыре коротких варианта')
-            if len({v.strip().casefold() for v in options}) != 4 or q['answer'] not in options:
+            if len({v.strip().casefold() for v in options}) != 4:
                 raise ValueError('Варианты должны различаться и включать эталон')
+            # Match generated reference wording to the actual button text. Only
+            # case and surrounding whitespace are ignored, never aliases/code punctuation.
+            canonical = next((v for v in options if v.strip().casefold()==q['answer'].strip().casefold()),None)
+            if canonical is None:
+                raise ValueError('Варианты должны различаться и включать эталон')
+            q['answer'] = canonical
         elif options:
             raise ValueError('Варианты допустимы только для choice')
         if kind == 'image':
