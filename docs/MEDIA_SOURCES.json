@@ -27,6 +27,36 @@
       "original": "https://dnm.nflximg.net/api/v6/s0XAg4q_jvYbSSbLvySyUsliNSg/AAAAQVpyHMp7w3_5R-9fGcJESZSsXE-lY4S7EVqNAASnagnBZW_c7-Oh7sRFebCkqxqz4S28wA5maXCzNj47rnVgvRYxt3atosNIPKhN5_j9BQ2i8jgPwFZYIyeBvjx-Zx678ApaZhhAngF5YiOWfj0fxaxj-Ek.jpg?r=c96",
       "bytes": 37683,
       "caption": "Henry Cavill as Geralt in The Witcher."
+    },
+    "s06": {
+      "source": "https://www.netflix.com/tudum/galleries/squid-game-season-2-photo-gallery",
+      "original": "https://dnm.nflximg.net/api/v6/a01MIaQTUgSJoLaS_OCn68Eg3hU/AAAAQZcr6IaM6aFNd0VW6HnkqZkSTnvLl2BwtcPDw7ZCCD6fm6SHjd0eTRk2Yux9J8KPANJYpdc8aLN6YBZoHEXZyOn3AcAhZnrYC3CIjDachPmyz5meF8O5Cqbx5WhuEn4q0WzTsdeNHFvVraVH7BqBl2u1EiE.jpg?r=38c",
+      "caption": "Lee Byung-hun as Front Man wears a black mask in Season 2 of 'Squid Game'",
+      "bytes": 90703
+    },
+    "s07": {
+      "source": "https://www.netflix.com/tudum/galleries/one-piece-first-look-photos",
+      "original": "https://dnm.nflximg.net/api/v6/a01MIaQTUgSJoLaS_OCn68Eg3hU/AAAAQVFjjBgl9JrDXtAPXJM9J6zzA0bBgvCKoTazwJ4zTKZnfI3rVhauejShqjawdM8ZmY2ejFTV5wb4gBcqpIl-bpmTlBD6le7Flo5KA3Kc72gxQeSyL70vtTmlfvsASn6XuQBnzf26jc0Ed4n5oEz_j59Y5KE.jpg?r=3da",
+      "caption": "Mackenyu Arata as Roronoa Zoro in One Piece Season 1.",
+      "bytes": 70642
+    },
+    "s08": {
+      "source": "https://www.netflix.com/tudum/wednesday",
+      "original": "https://dnm.nflximg.net/api/v6/s0XAg4q_jvYbSSbLvySyUsliNSg/AAAAQV0K__e1lVAYLTqKg5wJz4Ga0eSLt7xoAG873n2pn2qh4IJyGACAAX6hgBOAiXCPgvNeGXPeDPAYRigJZ5nJ3uzVWXCEhArGRLqxlp0X7P8B0ZMSpoEhz4ZZ9mNwk0pQZLoQzfMIc950I7GSTyUJwcExtcI.jpg?r=c51",
+      "caption": "‘Wednesday’ Dance Scene ",
+      "bytes": 42569
+    },
+    "s09": {
+      "source": "https://www.netflix.com/tudum/stranger-things",
+      "original": "https://dnm.nflximg.net/api/v6/s0XAg4q_jvYbSSbLvySyUsliNSg/AAAAQWeSFKrVnEAlbLXRzuNetHRaehAt46f3Fu5AcgfuoIf0uwGvKN5ZRFFAMAIC_Jyr548ehjcOUAV3hzeDhW5GYVhIVfv_yZL4hKg1wB1-dG9OGjtxVc2l2AImTcgeyjX3eBuQQxC9yKn0awAW4GDXPrk1Jxk.jpg?r=373",
+      "caption": "Gaten Matarazzo as Dustin Henderson in 'Stranger Things 5'",
+      "bytes": 51901
+    },
+    "s10": {
+      "source": "https://www.netflix.com/tudum/the-witcher",
+      "original": "https://dnm.nflximg.net/api/v6/s0XAg4q_jvYbSSbLvySyUsliNSg/AAAAQaSrrbV0mI3KVGssYBx2oZIyAeWbnD3a58KylyUGreXDP-2YEocmPCi6NW0ciieCLIJiRFj7d74uwTlUpLCJtBlHfnumcnoEmg9jRfQEqiBLmsmz-xu7gw-O8LHt6wE1iz9LotEnHRk7wCp5jlhpHL4vxMM.jpg?r=763",
+      "caption": "Jaskier, Ciri, and Geralt prepare for a fight in The Witcher.",
+      "bytes": 36976
     }
   },
   "nasa_video": {
@@ -60,6 +90,11 @@
     "s03.jpg": "f181af79fcff661dc43c40dbc6cb1e90c1c1eae786de3e395ca47b33ce579ce8",
     "s04.jpg": "8dafc348d1f1992920e259aa3516e0f0e18eb062da7ad2cad8a6defe2367861b",
     "s05.jpg": "2eddd8a7b7839475f6678c899c39198427de44917f949415deb70390130a6fcd",
+    "s06.jpg": "d0dbef27763d2b0a4aef33c36b93bb5c03f6064bd327302166a2478953931ea7",
+    "s07.jpg": "d8f67d1e459159827a3485c928dd1de6bc4e571879d019bd7553bcfc0fdd0c9a",
+    "s08.jpg": "163dffe334d1fc10936121bbb764008a211cd1ff07a6015990d999bd2dc18959",
+    "s09.jpg": "069c1ce9ff552e3ed818f139e5b59b8fb21b6ce7b1574222f0521c038a856219",
+    "s10.jpg": "72b9e24768c924b56f480664727a3c34d8e67bdbba900436b1d41cbb3801074e",
     "v01.mp4": "dddcf170e95a441687a30e3dc85836cd7f268fd98cbaf4c8f43aa3082f33127f",
     "v02.mp4": "417c6644e080ff7e4056c65352b7d1c1438227cddec68336ff2eadd0ab993967",
     "v03.mp4": "70ffe25f9c19f6c7034ad95deac7e2f4b23a2d53098b4a158e43c538c06b43b3"

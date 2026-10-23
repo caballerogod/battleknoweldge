@@ -24,6 +24,11 @@ MEDIA_CATALOG = {
  's03':dict(kind='image',url='/quiz-media/s03.jpg',series=True,reference='Уэнсдэй',description='Кадр: Уэнсдэй Аддамс с косами сидит за столом с пишущей машинкой. Спрашивай сериал «Уэнсдэй».',tags=['сериал','кино'],credit='Netflix / Tudum',source='https://www.netflix.com/tudum/wednesday'),
  's04':dict(kind='image',url='/quiz-media/s04.jpg',series=True,reference='Очень странные дела',description='Кадр: Одиннадцать с короткими волосами в серой одежде в синем пространстве с красными частицами. Сериал «Очень странные дела».',tags=['сериал','кино'],credit='Netflix / Tudum',source='https://www.netflix.com/tudum/stranger-things'),
  's05':dict(kind='image',url='/quiz-media/s05.jpg',series=True,reference='Ведьмак',description='Кадр: Геральт с длинными белыми волосами, исполненный Генри Кавиллом. Спрашивай сериал «Ведьмак».',tags=['сериал','кино'],credit='Netflix / Tudum',source='https://www.netflix.com/tudum/the-witcher'),
+ 's06':{'kind': 'image', 'url': '/quiz-media/s06.jpg', 'series': True, 'reference': 'Игра в кальмара', 'description': 'Резервный кадр: Фронтмен в чёрной геометрической маске, за ним охрана в розовой форме.', 'tags': ['сериал', 'кино'], 'credit': 'No Ju-han / Netflix', 'source': 'https://www.netflix.com/tudum/galleries/squid-game-season-2-photo-gallery'},
+ 's07':{'kind': 'image', 'url': '/quiz-media/s07.jpg', 'series': True, 'reference': 'Ван-Пис', 'description': 'Резервный кадр игрового ONE PIECE: Зоро с зелёными волосами и тремя серьгами.', 'tags': ['сериал', 'кино'], 'credit': 'Netflix / Tudum', 'source': 'https://www.netflix.com/tudum/galleries/one-piece-first-look-photos'},
+ 's08':{'kind': 'image', 'url': '/quiz-media/s08.jpg', 'series': True, 'reference': 'Уэнсдэй', 'description': 'Резервный кадр: танец Уэнсдэй в чёрном платье на школьном балу.', 'tags': ['сериал', 'кино'], 'credit': 'Netflix / Tudum', 'source': 'https://www.netflix.com/tudum/wednesday'},
+ 's09':{'kind': 'image', 'url': '/quiz-media/s09.jpg', 'series': True, 'reference': 'Очень странные дела', 'description': 'Резервный кадр: Дастин в выпускной шапочке с повязкой на голове, на заднем плане школа Хоукинса.', 'tags': ['сериал', 'кино'], 'credit': 'Netflix / Tudum', 'source': 'https://www.netflix.com/tudum/stranger-things'},
+ 's10':{'kind': 'image', 'url': '/quiz-media/s10.jpg', 'series': True, 'reference': 'Ведьмак', 'description': 'Резервный кадр: Геральт, Цири и Лютик стоят на улице, готовясь к схватке.', 'tags': ['сериал', 'кино'], 'credit': 'Netflix / Tudum', 'source': 'https://www.netflix.com/tudum/the-witcher'},
  'a01':dict(kind='audio',url='/quiz-media/a01.wav',description='Подлинная запись Нила Армстронга: One small step for (a) man, one giant leap for mankind. Оригинальная земная версия, не симуляция атмосферы Марса. Можно спросить говорящего или миссию Apollo 11.',tags=['космос','истори','аудио'],credit='NASA/JPL-Caltech',source='https://science.nasa.gov/resource/sounds-of-mars-one-small-step/'),
  'a02':dict(kind='audio',url='/quiz-media/a02.wav',description='Авторская запись азбуки Морзе: три коротких, три длинных, три коротких сигнала. Ответ SOS; это не запись телепередачи.',tags=['звук','аудио','морзе','связь'],credit='AI Knowledge Battle — собственная запись',source=''),
  'a03':dict(kind='audio',url='/quiz-media/a03.wav',description='Авторская запись двух чистых тонов 440 и 880 Гц: второй выше первого на октаву, частота удвоилась. Можно спросить интервал или отношение частот.',tags=['музык','звук','аудио','наук','физик'],credit='AI Knowledge Battle — собственная запись',source=''),
@@ -65,7 +70,11 @@ def format_plan(topics, rng=None):
     for t, topic in enumerate(topics):
         style=topic_style(topic)
         if style=='frames':
-            ids=[key for key,value in MEDIA_CATALOG.items() if value.get('series')]
+            groups={}
+            for key,value in MEDIA_CATALOG.items():
+                if value.get('series'):
+                    groups.setdefault(value['reference'],[]).append(key)
+            ids=[rng.choice(group) for group in groups.values()]
             rng.shuffle(ids)
             plan.extend(dict(topic_index=t,price=(i+1)*100,kind='image',image_id=key) for i,key in enumerate(ids[:5]))
             continue

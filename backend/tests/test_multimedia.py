@@ -40,7 +40,7 @@ def authored_pack(plan):
 def test_special_plans_preserve_five_distinct_series_and_binary_topics():
     plan=format_plan(TOPICS,random.Random(8))
     assert len(plan)==40
-    assert {q['image_id'] for q in plan[:5]}=={'s01','s02','s03','s04','s05'}
+    assert len({MEDIA_CATALOG[q['image_id']]['reference'] for q in plan[:5]})==5
     assert all(q['kind']=='linked' for q in plan[5:10])
     assert all(q['kind']=='yesno' for q in plan[10:15])
     assert {'audio','video'}<={q['kind'] for q in plan}
@@ -96,7 +96,7 @@ def test_real_generation_adapter_and_40_turns_without_paid_calls(tmp_path,monkey
         calls.append(schema)
         if schema is MixedPack:
             assert 'linked' in instructions and 'Не выдумывай' in instructions
-            assert 'a01' in data['images'] and 's05' in data['images']
+            assert 'a01' in data['images'] and sum(bool(v.get('series')) for v in data['images'].values())==5
             return {'clues':authored_pack(data['plan'])}
         if schema is EditorialReview:return {'issues':[]}
         raise AssertionError('No grading or external request expected')

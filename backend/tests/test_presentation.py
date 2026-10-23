@@ -23,8 +23,8 @@ def stage(tmp_path):
         payload = dict(player_id=player['id'], request_id=str(uuid4()), topics=list(bank.RAW)[:8], participants=['Аня','Борис','Саша'], presentation=True)
         yield client, app, clock, payload
 
-def test_all_200_clues_and_random_boards():
-    assert len(bank.catalog()) == 20
+def test_all_230_clues_and_random_boards():
+    assert len(bank.catalog()) == 23
     questions=[]
     for topic in bank.RAW:
         for reserve in (False, True):
@@ -32,7 +32,7 @@ def test_all_200_clues_and_random_boards():
             assert len(clues)==5
             assert [q['price'] for q in clues]==[100,200,300,400,500]
             questions.extend(q['question'] for q in clues)
-    assert len(set(questions))==200
+    assert len(set(questions))==230
     rng=random.Random(42)
     for _ in range(100):
         pack,meta=bank.presentation_pack(rng.sample(list(bank.RAW),8),rng.choice([True,False]))
@@ -56,7 +56,7 @@ def test_fallback_preserves_other_topics(monkeypatch):
 def test_catalog_creation_reserve_and_idempotency_without_key(stage):
     c,app,clock,payload=stage
     config=c.get('/api/trivia/config').json()
-    assert not config['configured'] and len(config['presentation_topics'])==20
+    assert not config['configured'] and len(config['presentation_topics'])==23
     assert all(set(t)=={'name','aliases'} for t in config['presentation_topics'])
     g=c.post('/api/trivia/games',json=payload).json()
     assert g['status']=='ready' and g['presentation'] and g['total']==40
@@ -127,3 +127,63 @@ def test_manual_answer_survives_restart_and_old_database_migrates(tmp_path):
     with TestClient(app) as c:
         assert c.get(url).status_code==200
         assert c.get(url).json()['participants'][0]['name']=='А'
+
+@pytest.mark.parametrize('reserve',[False,True])
+def test_expanded_presentation_complete_party_never_uses_ai(stage,reserve):
+    from app.trivia_media import SPECIAL_TOPICS
+    c,app,clock,payload=stage
+    topics=[*SPECIAL_TOPICS,'Музыка','Космос','Наука','Математика','География']
+    response=c.post('/api/trivia/games',json={**payload,'topics':topics,'reserve':reserve})
+    assert response.status_code==200,response.text
+    g=response.json();url='/api/trivia/games/'+g['id']
+    assert g['status']=='ready' and g['usage']['requests']==0
+    assert g['presentation_info']['bank_set']==('reserve' if reserve else 'main')
+    with Session(app.state.engine) as db:clues=json.loads(db.get(TriviaGame,g['id']).pack)
+    scores=[0,0,0]
+    for i,q in enumerate(clues):
+        opened=c.post(url+'/open',json={'cell':i}).json()
+        pending=opened['pending']
+        assert pending['deadline']==clock[0]+30
+        assert pending['participant']==i%3 and 'correct_answer' not in pending
+        if pending['media']:
+            assert not {'reference','source','credit'}&set(pending['media'])
+        if q['kind']=='yesno':assert pending['options']==['Да','Нет']
+        if i==5:
+            g=c.post(url+'/answer',json={'cell':i,'answer':'Три ответа своими словами'}).json()
+            assert g['pending']['manual']
+            assert g['pending']['correct_answer']==q['answer']
+            g=c.post(url+'/judge',json={'cell':i,'decision':'correct'}).json()
+            scores[i%3]+=q['price']
+        elif i==10:
+            wrong='Да' if q['answer']=='Нет' else 'Нет'
+            g=c.post(url+'/answer',json={'cell':i,'answer':wrong}).json()
+            scores[i%3]-=q['price']
+        elif i==39:
+            clock[0]+=31
+            g=c.post(url+'/answer',json={'cell':i,'answer':q['answer']}).json()
+            assert g['results'][-1]['decision']=='timeout'
+        else:
+            g=c.post(url+'/answer',json={'cell':i,'answer':q['answer']}).json()
+            scores[i%3]+=q['price']
+        assert g['played']==i+1 and [p['score'] for p in g['participants']]==scores
+        if i<5:assert g['results'][-1]['media']['mask']=='none'
+    assert g['status']=='finished' and g['usage']['requests']==0
+
+
+def test_new_catalog_topics_and_independent_reserve_stills():
+    from app.trivia_media import SPECIAL_TOPICS, MEDIA_CATALOG
+    from pathlib import Path
+    assert [t['name'] for t in bank.catalog()[:3]]==SPECIAL_TOPICS
+    primary=bank.rows(SPECIAL_TOPICS[0]);reserve=bank.rows(SPECIAL_TOPICS[0],True)
+    ids=lambda clues:{q['image_id'] for q in clues}
+    assert not ids(primary)&ids(reserve)
+    assert {q['answer'] for q in primary}=={q['answer'] for q in reserve}
+    root=Path(__file__).resolve().parents[2]/'frontend/public'
+    for p,r in zip(primary,reserve):
+        assert (root/MEDIA_CATALOG[p['image_id']]['url'].lstrip('/')).read_bytes()!=(root/MEDIA_CATALOG[r['image_id']]['url'].lstrip('/')).read_bytes()
+    for is_reserve in (False,True):
+        all_clues=[q for t in bank.RAW for q in bank.rows(t,is_reserve)]
+        media=[q['image_id'] for q in all_clues if q['image_id']]
+        assert len(media)==len(set(media))
+        assert {'image','audio','video','linked','yesno'}<={q['kind'] for q in all_clues}
+        for q in bank.rows('Да или Нет',is_reserve):assert q['options']==['Да','Нет']
