@@ -20,7 +20,9 @@ class FakeAI(OpenAIQuiz):
  def request(self,instructions,data,schema,tokens):
   self.calls.append((schema,tokens))
   if schema is FinalClue:return dict(question='Сколько будет два плюс три, если считаем обычные целые числа?',answer='5',aliases=['пять'],explanation='Два плюс три равно пяти, обычное сложение целых чисел.')
-  if schema is HostLine:return {'text':'Вот это поворот. Игра продолжается!'}
+  if schema is HostLine:
+   assert data['persona'] in {'friendly','bold','serious'}
+   return {'text':'Вот это поворот. Игра продолжается!'}
   raise AssertionError('No external calls')
  def grade(self,*args):raise AssertionError('Use exact answers or host verdict')
 
