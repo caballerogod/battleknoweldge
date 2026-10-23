@@ -5,3 +5,5 @@ describe('server-anchored question timer',()=>{
   it('refresh restores remaining time instead of granting another 30 seconds',()=>{const resumed=deadlineAnchor(1030,1022,900);expect(remainingSeconds(resumed,900)).toBe(8);});
   it('expired questions never receive a fresh countdown',()=>expect(remainingSeconds(deadlineAnchor(1030,1040,700),700)).toBe(0));
 });
+
+it('supports a full minute and preserves the server remainder on resume',()=>{expect(remainingSeconds(deadlineAnchor(1060,1000,0),0,60)).toBe(60);expect(remainingSeconds(deadlineAnchor(2042.5,2000,100),100,60)).toBe(43);expect(remainingSeconds(100,100,60)).toBe(0);});

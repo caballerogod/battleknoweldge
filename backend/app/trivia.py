@@ -152,6 +152,7 @@ def register_trivia(app, engine, clock, provider=None):
         current = len(results) % len(names) if names else 0
         if pending:
             public_pending = {key: pending[key] for key in ['cell', 'deadline', 'submitted', 'grading', 'grade_error']}
+            public_pending.update(paused=pending.get('paused',False),remaining=pending.get('remaining'),time_limit=pending.get('time_limit',30))
             clue = pack[pending['cell']]
             public_pending.update(question=clue['question'], kind=clue.get('kind','open'),
                                   options=clue.get('options',[]), image_url=image_url(clue.get('image_id','')),
@@ -342,10 +343,36 @@ def register_trivia(app, engine, clock, provider=None):
         if any(r['cell'] == payload.cell for r in json.loads(g.results)):
             raise HTTPException(409, 'Этот вопрос уже сыгран')
         names=json.loads(g.participants or '[]')
-        g.pending = json.dumps(dict(cell=payload.cell, participant=len(json.loads(g.results)) % len(names) if names else 0, deadline=clock()+30, submitted=None,
+        g.pending = json.dumps(dict(cell=payload.cell, participant=len(json.loads(g.results)) % len(names) if names else 0, deadline=clock()+60, time_limit=60, paused=False, submitted=None,
                                     grading=False, grade_error=''))
         db.commit()
         return view(g)
+
+    def audience_timer(sid,payload,db,pause):
+        db.execute(text('BEGIN IMMEDIATE'))
+        g=require(db,sid)
+        pending=json.loads(g.pending) if g.pending else None
+        if g.status!='ready' or not pending or pending['cell']!=payload.cell or pending['submitted'] is not None:
+            raise HTTPException(409,'Помощь зала доступна только во время ответа')
+        if pause and not pending.get('paused'):
+            now=clock()
+            if now>=pending['deadline']:
+                settle(db,g,pending,'timeout')
+                return view(g)
+            pending.update(paused=True,remaining=pending['deadline']-now)
+        elif not pause and pending.get('paused'):
+            pending.update(paused=False,deadline=clock()+pending.pop('remaining'))
+        g.pending=json.dumps(pending,ensure_ascii=False)
+        db.commit()
+        return view(g)
+
+    @app.post('/api/trivia/games/{sid}/audience-help')
+    def audience_help(sid:str,payload:CellInput,db:Session=Depends(db_session)):
+        return audience_timer(sid,payload,db,True)
+
+    @app.post('/api/trivia/games/{sid}/resume-answer')
+    def resume_answer(sid:str,payload:CellInput,db:Session=Depends(db_session)):
+        return audience_timer(sid,payload,db,False)
 
     @app.post('/api/trivia/games/{sid}/answer')
     def answer(sid: str, payload: FreeAnswer, tasks: BackgroundTasks, db: Session = Depends(db_session)):
@@ -361,7 +388,9 @@ def register_trivia(app, engine, clock, provider=None):
         if pending['grading'] and clock()-pending.get('started', clock()) < 100:
             return view(g)
         if pending['submitted'] is None:
-            if clock() >= pending['deadline']:
+            if pending.get('paused') and not payload.skip:
+                raise HTTPException(409,'Помощь зала: сначала продолжите ответ')
+            if not pending.get('paused') and clock() >= pending['deadline']:
                 settle(db, g, pending, 'timeout')
                 return view(g)
             if payload.skip:

@@ -114,7 +114,7 @@ def test_real_generation_adapter_and_40_turns_without_paid_calls(tmp_path,monkey
         with Session(app.state.engine) as db:clues=json.loads(db.get(TriviaGame,game['id']).pack)
         for i,q in enumerate(clues):
             opened=c.post(url+'/open',json={'cell':i}).json()
-            assert opened['pending']['deadline']==1030
+            assert opened['pending']['deadline']==1060
             assert 'correct_answer' not in opened['pending']
             if opened['pending']['media']:
                 assert 'source' not in opened['pending']['media'] and 'reference' not in opened['pending']['media']

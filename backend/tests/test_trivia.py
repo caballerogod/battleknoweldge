@@ -89,8 +89,8 @@ def test_refresh_preserves_deadline_and_cannot_open_two_cells(trivia):
     assert c.post(url+'/answer', json={'cell': 0, 'answer': 'int'}).status_code == 409
     first = c.post(url+'/open', json={'cell': 0}).json()
     clock[0] += 12
-    assert c.get(url).json()['pending']['deadline'] == first['pending']['deadline'] == 1030
-    assert c.post(url+'/open', json={'cell': 0}).json()['pending']['deadline'] == 1030
+    assert c.get(url).json()['pending']['deadline'] == first['pending']['deadline'] == 1060
+    assert c.post(url+'/open', json={'cell': 0}).json()['pending']['deadline'] == 1060
     assert c.post(url+'/open', json={'cell': 1}).status_code == 409
 
 
@@ -99,7 +99,7 @@ def test_expired_answer_zero_points_even_if_correct(trivia):
     game = create(c, player).json()
     url = f'/api/trivia/games/{game["id"]}'
     c.post(url+'/open', json={'cell': 0})
-    clock[0] = 1030
+    clock[0] = 1060
     result = c.post(url+'/answer', json={'cell': 0, 'answer': 'int'}).json()
     assert result['results'][0]['decision'] == 'timeout' and result['score'] == 0
 
@@ -190,7 +190,7 @@ def test_pending_question_survives_server_restart(trivia):
     c.post(url+'/open', json={'cell': 0})
     clock[0] = 1020
     app.state.initialize()
-    assert c.get(url).json()['pending']['deadline'] == 1030
+    assert c.get(url).json()['pending']['deadline'] == 1060
 
 
 @pytest.mark.parametrize('a,b,same', [('3,14', '3.14', True), ('314', '3.14', False),

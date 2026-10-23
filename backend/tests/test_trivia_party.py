@@ -44,7 +44,7 @@ def test_party_40_turns_scores_privacy_and_replay_idempotent(party):
     for i,q in enumerate(clues):
         opened=c.post(url+'/open',json={'cell':i}).json()
         assert opened['pending']['participant']==i%3
-        assert opened['pending']['deadline']==1030
+        assert opened['pending']['deadline']==1060
         assert 'answer' not in opened['pending'] and 'image_id' not in opened['pending']
         if q['kind']=='choice':
             assert opened['pending']['options']==q['options']
@@ -75,7 +75,7 @@ def test_party_persistence_wrong_choice_timeout_and_bounds(party):
     assert result['participants'][0]['score']==-clues[cell]['price']
     nextcell=next(i for i in range(40) if i!=cell)
     c.post(url+'/open',json={'cell':nextcell})
-    clock[0]=1030
+    clock[0]=1060
     timeout=c.post(url+'/answer',json={'cell':nextcell,'answer':clues[nextcell]['answer']}).json()
     assert timeout['results'][-1]['decision']=='timeout' and timeout['participants'][1]['score']==0
     assert timeout['current_participant']==2

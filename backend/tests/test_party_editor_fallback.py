@@ -30,7 +30,7 @@ def test_flagged_answer_is_private_until_locked_and_host_can_remove(party):
     assert g['status']=='ready' and g['host_review_count']==1
     with Session(app.state.engine) as db:answer=json.loads(db.get(TriviaGame,sid).pack)[0]['answer']
     g=c.post(url+'/open',json={'cell':0}).json()
-    assert g['pending']['host_review'] and g['pending']['deadline']==1030
+    assert g['pending']['host_review'] and g['pending']['deadline']==1060
     assert 'correct_answer' not in g['pending'] and 'review_note' not in g['pending']
     assert c.post(url+'/judge',json={'cell':0,'decision':'correct'}).status_code==409
     g=c.post(url+'/answer',json={'cell':0,'answer':answer}).json()

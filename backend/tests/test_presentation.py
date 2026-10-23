@@ -80,11 +80,11 @@ def test_complete_party_host_lock_scores_privacy_and_timeout(stage):
     scores=[0,0,0]
     for i,q in enumerate(clues):
         g=c.post(url+'/open',json={'cell':i}).json()
-        assert g['pending']['deadline']==clock[0]+30
+        assert g['pending']['deadline']==clock[0]+60
         assert 'correct_answer' not in g['pending']
         assert c.post(url+'/judge',json={'cell':i,'decision':'correct'}).status_code==409
         if i==39:
-            clock[0]+=31
+            clock[0]+=61
             g=c.post(url+'/answer',json={'cell':i,'answer':q['answer']}).json()
             assert g['results'][-1]['decision']=='timeout'
         elif q['kind']=='choice' or i%2==0:
@@ -96,7 +96,7 @@ def test_complete_party_host_lock_scores_privacy_and_timeout(stage):
             assert c.get(url).json()['pending']['manual']
             locked=c.post(url+'/answer',json={'cell':i,'answer':'Подменённый ответ'}).json()
             assert locked['pending']['submitted']=='Свободная формулировка игрока'
-            clock[0]+=31
+            clock[0]+=61
             decision='incorrect' if i%3==0 else 'correct'
             g=c.post(url+'/judge',json={'cell':i,'decision':decision}).json()
             scores[i%3]+=q['price']*(-1 if decision=='incorrect' else 1)
@@ -143,7 +143,7 @@ def test_expanded_presentation_complete_party_never_uses_ai(stage,reserve):
     for i,q in enumerate(clues):
         opened=c.post(url+'/open',json={'cell':i}).json()
         pending=opened['pending']
-        assert pending['deadline']==clock[0]+30
+        assert pending['deadline']==clock[0]+60
         assert pending['participant']==i%3 and 'correct_answer' not in pending
         if pending['media']:
             assert not {'reference','source','credit'}&set(pending['media'])
@@ -159,7 +159,7 @@ def test_expanded_presentation_complete_party_never_uses_ai(stage,reserve):
             g=c.post(url+'/answer',json={'cell':i,'answer':wrong}).json()
             scores[i%3]-=q['price']
         elif i==39:
-            clock[0]+=31
+            clock[0]+=61
             g=c.post(url+'/answer',json={'cell':i,'answer':q['answer']}).json()
             assert g['results'][-1]['decision']=='timeout'
         else:
