@@ -59,6 +59,8 @@ def create_app(database_url=None, rng=None, clock=None, quiz_provider=None):
             trivia_columns = {row[1] for row in connection.execute(text('PRAGMA table_info(trivia_games)'))}
             if 'participants' not in trivia_columns:
                 connection.execute(text("ALTER TABLE trivia_games ADD COLUMN participants TEXT NOT NULL DEFAULT '[]'"))
+            if 'presentation_meta' not in trivia_columns:
+                connection.execute(text("ALTER TABLE trivia_games ADD COLUMN presentation_meta TEXT NOT NULL DEFAULT ''"))
         with Session(engine) as db:
             db.execute(text('BEGIN IMMEDIATE'))
             for data in question_rows():

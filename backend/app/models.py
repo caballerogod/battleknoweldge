@@ -87,5 +87,6 @@ class TriviaGame(Base):
     pending: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(default='generating')
     demo: Mapped[bool] = mapped_column(default=False)
+    presentation_meta: Mapped[str] = mapped_column(Text, default='')
     error: Mapped[str] = mapped_column(Text, default='')
     created_at: Mapped[str] = mapped_column(default=now)

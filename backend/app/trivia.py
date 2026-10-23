@@ -11,6 +11,7 @@ from .trivia_media import image_url, validate_mixed
 from .trivia_party_demo import PARTY_TOPICS, party_demo
 from .quiz_ai import OpenAIQuiz, exact_answer, validate_pack, settings
 from .quiz_local import quiz_provider, OllamaQuiz
+from .presentation_bank import catalog as presentation_catalog, presentation_pack
 
 DEMO_TOPICS = ['Программирование', 'Математика', 'История', 'География', 'Наука']
 DEMO_ALIASES = {
@@ -41,6 +42,8 @@ class NewGame(BaseModel):
     topics: list[str] = Field(min_length=5, max_length=8)
     participants: list[str] = Field(default_factory=list, max_length=3)
     demo: bool = False
+    presentation: bool = False
+    reserve: bool = False
 
     @field_validator('topics')
     @classmethod
@@ -62,6 +65,10 @@ class NewGame(BaseModel):
 
     @model_validator(mode='after')
     def format_valid(self):
+        if self.presentation and (self.demo or len(self.participants)!=3):
+            raise ValueError('Для презентации нужны три участника; демо выбирается отдельно')
+        if self.reserve and not self.presentation:
+            raise ValueError('Резервный набор доступен в презентации')
         if len(self.topics) != (8 if self.participants else 5):
             raise ValueError('Для партии на троих нужны восемь тем; для прежней одиночной — пять')
         return self
@@ -74,6 +81,10 @@ class CellInput(BaseModel):
 class FreeAnswer(CellInput):
     answer: str | None = Field(default=None, max_length=500)
     skip: bool = False
+
+
+class HostVerdict(CellInput):
+    decision: str = Field(pattern='^(correct|incorrect|ambiguous)$')
 
 
 def demo_pack():
@@ -129,6 +140,8 @@ def register_trivia(app, engine, clock, provider=None):
             public_pending.update(question=clue['question'], kind=clue.get('kind','open'),
                                   options=clue.get('options',[]), image_url=image_url(clue.get('image_id','')),
                                   participant=pending.get('participant',current))
+            if pending.get('manual') and pending['submitted'] is not None:
+                public_pending.update(manual=True,correct_answer=clue['answer'],explanation=clue['explanation'])
         return dict(id=g.id, player_id=g.player_id, topics=json.loads(g.topics), status=g.status,
                     demo=g.demo, error=g.error,
                     participants=[dict(name=name,score=sum(r['delta'] for r in results if r.get('participant',0)==i))
@@ -138,7 +151,8 @@ def register_trivia(app, engine, clock, provider=None):
                     played=len(results), cells=[dict(cell=i, topic_index=q['topic_index'], price=q['price'],
                                                    played=i in done) for i, q in enumerate(pack)],
                     pending=public_pending, results=results, server_time=clock(), usage=usage_summary(g.id),
-                    progress=generation_progress.get(g.id,''))
+                    progress=generation_progress.get(g.id,''),presentation=bool(g.presentation_meta),
+                    presentation_info=json.loads(g.presentation_meta or '{}'))
 
     def generate(sid):
         with Session(engine) as db:
@@ -225,6 +239,7 @@ def register_trivia(app, engine, clock, provider=None):
         ready,message=ai.availability() if local else (ai.configured,'')
         return dict(configured=ready, provider='ollama' if local else 'openai', message=message,
                     demo_topics=DEMO_TOPICS, party_demo_topics=PARTY_TOPICS,
+                    presentation_topics=presentation_catalog(),
                     models={role:config['OLLAMA_MODEL'] if local else config['OPENAI_'+role.upper()+'_MODEL'] for role in ('generation','review','grading')},
                     usage=usage_summary())
 
@@ -246,22 +261,29 @@ def register_trivia(app, engine, clock, provider=None):
         if previous:
             if previous.player_id != payload.player_id:
                 raise HTTPException(409, 'Идентификатор запроса уже использован')
-            if previous.demo != payload.demo or json.loads(previous.topics) != payload.topics or json.loads(previous.participants or '[]') != payload.participants:
+            meta=json.loads(previous.presentation_meta or '{}')
+            if bool(previous.presentation_meta)!=payload.presentation or meta.get('reserve_requested',False)!=payload.reserve or previous.demo != payload.demo or json.loads(previous.topics) != payload.topics or json.loads(previous.participants or '[]') != payload.participants:
                 raise HTTPException(409, 'Повторный запрос должен содержать те же темы')
             return view(previous)
         if payload.demo and payload.topics != (PARTY_TOPICS if payload.participants else DEMO_TOPICS):
             raise HTTPException(422, 'Демонстрация использует готовый набор тем')
-        if not payload.demo and not ai.configured:
+        if not payload.demo and not payload.presentation and not ai.configured:
             raise HTTPException(503, ai.availability()[1] if isinstance(ai,OllamaQuiz) else 'Генерация пока недоступна: на сервере не настроен OpenAI API-ключ. Можно сыграть демонстрационную партию.')
         g = TriviaGame(id=str(uuid4()), request_id=str(payload.request_id), player_id=payload.player_id,
                        topics=json.dumps(payload.topics, ensure_ascii=False), participants=json.dumps(payload.participants,ensure_ascii=False), demo=payload.demo)
         if payload.demo:
             g.pack, g.status = json.dumps(validate_pack({'clues':party_demo(demo_pack())},8) if payload.participants else demo_pack(), ensure_ascii=False), 'ready'
+        elif payload.presentation:
+            try:
+                pack,meta=presentation_pack(payload.topics,payload.reserve)
+            except ValueError as error:
+                raise HTTPException(422,str(error)) from None
+            g.pack,g.status,g.presentation_meta=json.dumps(pack,ensure_ascii=False),'ready',json.dumps(meta,ensure_ascii=False)
         db.add(g)
         db.flush()
         result = view(g)
         db.commit()
-        if not payload.demo:
+        if not payload.demo and not payload.presentation:
             tasks.add_task(generate, g.id)
         return result
 
@@ -298,6 +320,8 @@ def register_trivia(app, engine, clock, provider=None):
         pending = json.loads(g.pending) if g.pending else None
         if not pending or pending['cell'] != payload.cell:
             raise HTTPException(409, 'Откройте вопрос перед ответом')
+        if pending.get('manual'):
+            return view(g)
         if pending['grading'] and clock()-pending.get('started', clock()) < 100:
             return view(g)
         if pending['submitted'] is None:
@@ -319,6 +343,10 @@ def register_trivia(app, engine, clock, provider=None):
         correct=pending['submitted']==clue['answer'] if is_choice else exact_answer(pending['submitted'], clue)
         if correct:
             settle(db, g, pending, 'correct')
+        elif g.presentation_meta and not is_choice:
+            pending.update(manual=True,grading=False,grade_error='')
+            g.pending=json.dumps(pending,ensure_ascii=False)
+            db.commit()
         elif g.demo or is_choice:
             reason='Выбран неверный вариант ответа.' if is_choice else 'В деморежиме проверяются только точные ответы и подготовленные варианты.'
             settle(db, g, pending, 'incorrect', reason)
@@ -327,6 +355,20 @@ def register_trivia(app, engine, clock, provider=None):
             g.pending = json.dumps(pending, ensure_ascii=False)
             db.commit()
             tasks.add_task(grade, sid, pending['token'])
+        return view(g)
+
+    @app.post('/api/trivia/games/{sid}/judge')
+    def judge(sid: str,payload: HostVerdict,db: Session = Depends(db_session)):
+        db.execute(text('BEGIN IMMEDIATE'))
+        g=require(db,sid)
+        if not g.presentation_meta:
+            raise HTTPException(409,'Оценка ведущего доступна в презентации')
+        if any(r['cell']==payload.cell for r in json.loads(g.results)):
+            return view(g)
+        pending=json.loads(g.pending) if g.pending else None
+        if not pending or pending['cell']!=payload.cell or not pending.get('manual') or pending['submitted'] is None:
+            raise HTTPException(409,'Сначала зафиксируйте свободный ответ')
+        settle(db,g,pending,payload.decision,'Решение ведущего.')
         return view(g)
 
     @app.post('/api/trivia/games/{sid}/finish')
