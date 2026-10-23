@@ -1,6 +1,6 @@
 import json
 from uuid import UUID, uuid4
-from fastapi import BackgroundTasks, Depends, HTTPException
+from fastapi import BackgroundTasks, Depends, HTTPException, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -312,6 +312,20 @@ def register_trivia(app, engine, clock, provider=None):
     @app.get('/api/trivia/games/{sid}')
     def get(sid: str, db: Session = Depends(db_session)):
         return view(require(db, sid))
+
+    @app.get('/api/trivia/games/{sid}/host-sheet')
+    def host_sheet(sid: str, response: Response, db: Session = Depends(db_session)):
+        g=require(db,sid)
+        if g.status not in {'ready','finished'}:
+            raise HTTPException(409,'Ответы появятся после подготовки вопросов')
+        response.headers['Cache-Control']='no-store'
+        topics=json.loads(g.topics)
+        clues=json.loads(g.pack)
+        return dict(id=g.id,topics=[dict(name=topic,questions=[dict(
+            cell=i,price=q['price'],question=q['question'],answer=q['answer'],
+            aliases=q['aliases'],explanation=q['explanation'],options=q.get('options',[]),
+            host_review=bool(notes_for(g,i)),review_note=' '.join(n['reason'] for n in notes_for(g,i)))
+            for i,q in enumerate(clues) if q['topic_index']==t]) for t,topic in enumerate(topics)])
 
     @app.post('/api/trivia/games/{sid}/open')
     def open_cell(sid: str, payload: CellInput, db: Session = Depends(db_session)):
